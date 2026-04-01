@@ -93,11 +93,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # DATABASE
 # =========================
 DATABASES = {
-    'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
+    'default': dj_database_url.config(
+        default=os.getenv("DATABASE_URL", "sqlite:///db.sqlite3")
+    )
 }
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
 # =========================
 # AUTH
 # =========================
