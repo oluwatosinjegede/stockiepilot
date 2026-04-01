@@ -134,6 +134,7 @@ DEFAULT_FROM_EMAIL = os.getenv(
     "StockiePilot <no-reply@stockiepilot.telewest.com.ng>"
 )
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # =========================
 # FRONTEND URL (IMPORTANT)
