@@ -2,6 +2,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+
+import dj_database_url
+
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -44,6 +48,7 @@ INSTALLED_APPS = [
 # =========================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
 
@@ -88,12 +93,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # DATABASE
 # =========================
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
 }
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # =========================
 # AUTH
@@ -105,7 +108,7 @@ LOGIN_URL = '/login/'
 # =========================
 # STATIC / MEDIA
 # =========================
-STATIC_URL = '/static/'
+
 MEDIA_URL = '/media/'
 
 
@@ -136,7 +139,7 @@ DEFAULT_FROM_EMAIL = os.getenv(
 # =========================
 # FRONTEND URL (IMPORTANT)
 # =========================
-BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.getenv("BASE_URL", "https://your-app.up.railway.app")
 
 
 # =========================
