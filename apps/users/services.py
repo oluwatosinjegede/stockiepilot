@@ -4,7 +4,7 @@ from django.core.mail import send_mail
 from django.urls import reverse
 
 def send_verification_email(user, token):
-    verification_link = f"http://127.0.0.1:8000{reverse('verify_email', args=[token])}"
+    verification_link = f"https://stockiepilot.up.railway.app{reverse('verify_email', args=[token])}"
 
     send_mail(
         subject="Verify your StockiePilot account",
