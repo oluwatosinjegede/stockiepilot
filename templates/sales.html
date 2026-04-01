@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold">Sales</h2>
+
+  <a href="{% url 'create_sale' %}"
+     class="bg-green-600 text-white px-4 py-2 rounded-lg">
+    + New Sale
+  </a>
+</div>
+
+<div class="bg-white rounded-2xl shadow overflow-hidden">
+
+  <table class="w-full text-sm">
+
+    <thead class="bg-gray-100 text-gray-600">
+      <tr>
+        <th class="p-3 text-left">Product</th>
+        <th class="p-3 text-left">Quantity</th>
+        <th class="p-3 text-left">Total Price</th>
+        <th class="p-3 text-left">Status</th>
+        <th class="p-3 text-left">Date</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for item in sales %}
+      <tr class="border-b hover:bg-gray-50 transition">
+
+        <!-- PRODUCT -->
+        <td class="p-3 font-medium">
+          {{ item.product.name }}
+        </td>
+
+        <!-- QUANTITY -->
+        <td class="p-3">
+          {{ item.quantity }}
+        </td>
+
+        <!-- TOTAL -->
+        <td class="p-3 text-green-600 font-semibold">
+          ₦{{ item.total_price|floatformat:2 }}
+        </td>
+
+        <!-- STATUS -->
+        <td class="p-3">
+          <span class="px-2 py-1 rounded text-xs
+            {% if item.sale.status == 'completed' %}
+              bg-green-100 text-green-700
+            {% else %}
+              bg-yellow-100 text-yellow-700
+            {% endif %}
+          ">
+            {{ item.sale.status }}
+          </span>
+        </td>
+
+        <!-- DATE -->
+        <td class="p-3 text-gray-500 whitespace-nowrap">
+          {{ item.sale.created_at|date:"M d, Y H:i" }}
+        </td>
+
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="p-6 text-center text-gray-500">
+          No sales recorded yet
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+
+  </table>
+
+</div>
+
+{% endblock %}

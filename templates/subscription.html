@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="max-w-7xl mx-auto py-10">
+
+  <!-- HEADER -->
+  <div class="text-center mb-10">
+    <h1 class="text-3xl font-bold">Choose Your Plan</h1>
+    <p class="text-gray-500 mt-2">Simple pricing for every business</p>
+  </div>
+
+  <!-- PRICING GRID -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+    <!-- FREE PLAN -->
+    <div class="bg-white rounded-xl shadow p-6 border">
+      <h3 class="text-xl font-semibold mb-2">Free</h3>
+      <p class="text-gray-500 mb-4">For small starters</p>
+
+      <h2 class="text-3xl font-bold mb-4">₦0</h2>
+
+      <ul class="space-y-2 text-sm text-gray-600 mb-6">
+        <li>✔ Up to 2 Products</li>
+        <li>✔ Basic Sales Tracking</li>
+        <li>✔ Limited Reports</li>
+      </ul>
+
+      {% if current_plan == "free" %}
+        <button class="w-full bg-gray-300 py-2 rounded-lg cursor-not-allowed">
+          Current Plan
+        </button>
+      {% else %}
+        <a href="{% url 'subscribe' 'free' %}"
+           class="block text-center bg-indigo-600 text-white py-2 rounded-lg">
+          Choose Plan
+        </a>
+      {% endif %}
+    </div>
+
+    <!-- BASIC PLAN -->
+    <div class="bg-white rounded-xl shadow p-6 border">
+      <h3 class="text-xl font-semibold mb-2">Basic</h3>
+      <p class="text-gray-500 mb-4">For small businesses</p>
+
+      <h2 class="text-3xl font-bold mb-4">₦2,500/mo</h2>
+
+      <ul class="space-y-2 text-sm text-gray-600 mb-6">
+        <li>✔ Up to 10 Products</li>
+        <li>✔ Sales Tracking</li>
+        <li>✔ Basic Analytics</li>
+        <li>✔ Email Notifications</li>
+      </ul>
+
+      {% if current_plan == "basic" %}
+        <button class="w-full bg-gray-300 py-2 rounded-lg cursor-not-allowed">
+          Current Plan
+        </button>
+      {% else %}
+        <a href="{% url 'paystack_init' 'basic' %}"
+           class="block text-center bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">
+          Upgrade
+        </a>
+      {% endif %}
+    </div>
+
+    <!-- PRO PLAN -->
+    <div class="bg-white rounded-xl shadow-lg p-6 border-2 border-indigo-600 relative">
+
+      <span class="absolute top-2 right-2 text-xs bg-indigo-600 text-white px-2 py-1 rounded">
+        Popular
+      </span>
+
+      <h3 class="text-xl font-semibold mb-2">Pro</h3>
+      <p class="text-gray-500 mb-4">For growing businesses</p>
+
+      <h2 class="text-3xl font-bold mb-4">₦5,000/mo</h2>
+
+      <ul class="space-y-2 text-sm text-gray-600 mb-6">
+        <li>✔ Unlimited Products</li>
+        <li>✔ Full Sales Analytics</li>
+        <li>✔ Inventory Alerts</li>
+        <li>✔ Email Reports</li>
+      </ul>
+
+      {% if current_plan == "pro" %}
+        <button class="w-full bg-gray-300 py-2 rounded-lg cursor-not-allowed">
+          Current Plan
+        </button>
+      {% else %}
+        <a href="{% url 'paystack_init' 'pro' %}"
+           class="block text-center bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">
+          Upgrade
+        </a>
+      {% endif %}
+    </div>
+
+    <!-- ENTERPRISE -->
+    <div class="bg-white rounded-xl shadow p-6 border">
+      <h3 class="text-xl font-semibold mb-2">Enterprise</h3>
+      <p class="text-gray-500 mb-4">For large scale operations</p>
+
+      <h2 class="text-3xl font-bold mb-4">₦15,000/mo</h2>
+
+      <ul class="space-y-2 text-sm text-gray-600 mb-6">
+        <li>✔ Everything in Pro</li>
+        <li>✔ Multi-branch Support</li>
+        <li>✔ Advanced Analytics</li>
+        <li>✔ Priority Support</li>
+      </ul>
+
+      {% if current_plan == "enterprise" %}
+        <button class="w-full bg-gray-300 py-2 rounded-lg cursor-not-allowed">
+          Current Plan
+        </button>
+      {% else %}
+        <a href="{% url 'paystack_init' 'enterprise' %}"
+           class="block text-center bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">
+          Upgrade
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

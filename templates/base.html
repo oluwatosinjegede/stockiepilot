@@ -1,0 +1,155 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page_title|default:"StockiePilot" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+
+<body class="h-full bg-gray-100 dark:bg-gray-900 transition duration-300">
+
+<div class="flex h-full">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside id="sidebar"
+         class="fixed lg:relative z-30 w-64 bg-gradient-to-b from-indigo-600 to-indigo-900 text-white flex flex-col shadow-xl transform lg:translate-x-0 -translate-x-full transition-transform duration-300">
+
+    <div class="p-6 text-2xl font-bold tracking-wide">
+      🚀 StockiePilot
+    </div>
+
+    <nav class="flex-1 px-4 space-y-2">
+
+      <a href="{% url 'dashboard' %}"
+         class="block px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">
+        📊 Dashboard
+      </a>
+
+      <a href="{% url 'products' %}"
+         class="block px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'products' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">
+        📦 Products
+      </a>
+
+      <a href="{% url 'sales' %}"
+         class="block px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'sales' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">
+        💰 Sales
+      </a>
+
+      <a href="{% url 'subscription' %}"
+         class="block px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'subscription' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">
+        💳 Subscription
+      </a>
+
+    </nav>
+
+    <!-- USER INFO -->
+    <div class="p-4 border-t border-white/20 text-sm">
+      {% if request.user.is_authenticated %}
+        <div class="font-medium">{{ request.user.email }}</div>
+        <div class="text-xs opacity-70 mt-1">
+          Plan:
+          {{ request.user.company.subscription.plan.name|default:"Free" }}
+        </div>
+      {% else %}
+        <div>Guest</div>
+      {% endif %}
+    </div>
+
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="flex-1 flex flex-col w-full">
+
+    <!-- ================= TOP BAR ================= -->
+    <header class="bg-white dark:bg-gray-800 shadow px-4 py-4 flex justify-between items-center">
+
+      <!-- LEFT -->
+      <div class="flex items-center gap-3">
+
+        <!-- Mobile Menu Button -->
+        <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 dark:text-white">
+          ☰
+        </button>
+
+        <h1 class="text-lg font-semibold text-gray-800 dark:text-white">
+          {{ page_title|default:"Dashboard" }}
+        </h1>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="flex items-center gap-4">
+
+        <!-- Dark Mode -->
+        <button onclick="toggleDarkMode()"
+                class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">
+          🌙
+        </button>
+
+        <!-- Logout -->
+        {% if request.user.is_authenticated %}
+          <a href="{% url 'logout' %}" class="text-red-500 text-sm">
+            Logout
+          </a>
+        {% endif %}
+
+      </div>
+    </header>
+
+    <!-- ================= TOAST MESSAGES ================= -->
+    <div class="fixed top-5 right-5 z-50 space-y-2">
+      {% for message in messages %}
+        <div class="bg-green-500 text-white px-4 py-2 rounded shadow animate-fade-in">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- ================= CONTENT ================= -->
+    <main class="flex-1 overflow-y-auto p-6">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+<script>
+/* Dark mode persistence */
+if (localStorage.getItem('theme') === 'dark') {
+  document.documentElement.classList.add('dark');
+}
+
+function toggleDarkMode() {
+  document.documentElement.classList.toggle('dark');
+
+  if (document.documentElement.classList.contains('dark')) {
+    localStorage.setItem('theme', 'dark');
+  } else {
+    localStorage.setItem('theme', 'light');
+  }
+}
+
+/* Sidebar toggle (mobile) */
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('-translate-x-full');
+}
+</script>
+
+</body>
+</html>

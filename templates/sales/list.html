@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Sales</h2>
+
+  <a href="{% url 'create_sale' %}"
+     class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition">
+    + New Sale
+  </a>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow overflow-hidden">
+
+  <table class="w-full text-sm">
+
+    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200">
+      <tr>
+        <th class="p-3 text-left">Date</th>
+        <th class="p-3 text-left">Amount</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for sale in sales %}
+      <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+        <td class="p-3">
+          {{ sale.sale_date|date:"M d, Y H:i" }}
+        </td>
+
+        <td class="p-3 font-semibold text-green-600">
+          ₦{{ sale.total_amount }}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="2" class="p-6 text-center text-gray-500">
+          No sales recorded yet
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+
+  </table>
+
+</div>
+
+{% endblock %}
