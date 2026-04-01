@@ -39,7 +39,7 @@ def initialize_paystack_payment(request, plan):
     data = {
         "email": request.user.email,
         "amount": amount,
-        "callback_url": "http://127.0.0.1:8000/subscription/verify/",
+        "callback_url": "https://stockiepilot.up.railway.app/subscription/verify/",
         "metadata": {
             "plan": plan,
             "company_id": company.id
