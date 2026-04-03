@@ -80,10 +80,13 @@ def dashboard(request):
             created_at__lt=current_month
         ).aggregate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))["total"]
 
-        growth_rate = (
-            ((current_month_revenue - previous_month_revenue) / previous_month_revenue) * 100
-            if previous_month_revenue > 0 else 0
-        )
+        if previous_month_revenue > 0:
+            growth_rate = float(
+                (current_month_revenue - previous_month_revenue)
+                / previous_month_revenue * 100
+            )
+        else:
+            growth_rate = 0.0
 
         # =========================
         # MONTHLY TREND (FIXED)
@@ -155,10 +158,10 @@ def dashboard(request):
         ]
 
         return render(request, "dashboard.html", {
-            "total_revenue": total_revenue,
-            "total_cost": total_cost,
-            "profit": profit,
-            "total_sales": total_sales,
+            "total_revenue": float(total_revenue),
+            "total_cost": float(total_cost),
+            "profit": float(profit),
+            "total_sales": float(total_sales),
 
             "current_month_revenue": current_month_revenue,
             "previous_month_revenue": previous_month_revenue,
