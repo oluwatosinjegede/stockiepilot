@@ -1,23 +1,18 @@
-# apps/products/views.py
-
 from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Value
 from django.db.models.functions import Coalesce
 
 from apps.subscriptions.views import Plans
 from .models import Product, Category
+from .services.inventory import calculate_inventory_metrics
 
 
-
-
-# =========================
-# PLAN LIMITS
-# =========================
 PLAN_LIMITS = {
     Plans.FREE: 10,
     Plans.BASIC: 50,
@@ -26,9 +21,6 @@ PLAN_LIMITS = {
 }
 
 
-# =========================
-# PRODUCTS VIEW (ANALYTICS READY)
-# =========================
 @login_required
 def products_view(request):
     company = getattr(request.user, "company", None)
@@ -37,22 +29,15 @@ def products_view(request):
         messages.error(request, "User is not assigned to a company.")
         return redirect("dashboard")
 
-    # =========================
-    # CREATE PRODUCT
-    # =========================
+    # ================= CREATE =================
     if request.method == "POST":
 
-        # PLAN LIMIT CHECK
         limit = PLAN_LIMITS.get(company.subscription_plan)
 
         if limit is not None:
-            current_count = Product.objects.filter(company=company).count()
-
-            if current_count >= limit:
-                messages.error(
-                    request,
-                    "You have reached your product limit. Upgrade your plan."
-                )
+            count = Product.objects.filter(company=company).count()
+            if count >= limit:
+                messages.error(request, "Upgrade your plan.")
                 return redirect("subscription")
 
         name = request.POST.get("name", "").strip()
@@ -60,9 +45,8 @@ def products_view(request):
         quantity = request.POST.get("quantity")
         category_id = request.POST.get("category")
 
-        # VALIDATION
         if not name or not price or not quantity:
-            messages.error(request, "All fields are required.")
+            messages.error(request, "All fields required.")
             return redirect("products")
 
         try:
@@ -73,26 +57,21 @@ def products_view(request):
                 raise ValueError
 
         except (InvalidOperation, ValueError):
-            messages.error(request, "Invalid price or quantity.")
+            messages.error(request, "Invalid input.")
             return redirect("products")
 
-        # CATEGORY SAFE FETCH
-        category = None
-        if category_id:
-            category = Category.objects.filter(id=category_id).first()
+        category = Category.objects.filter(id=category_id).first() if category_id else None
 
-        # DUPLICATE CHECK
         if Product.objects.filter(company=company, name__iexact=name).exists():
             messages.error(request, "Product already exists.")
             return redirect("products")
 
-        # CREATE
         Product.objects.create(
             company=company,
             name=name,
             category=category,
             selling_price=price,
-            cost_price=price,  # fallback (important)
+            cost_price=price,  # prevents None errors
             quantity=quantity,
             sku=f"SKU-{company.id}-{name[:5].upper()}"
         )
@@ -100,9 +79,7 @@ def products_view(request):
         messages.success(request, "Product created successfully.")
         return redirect("products")
 
-    # =========================
-    # FETCH PRODUCTS
-    # =========================
+    # ================= FETCH =================
     products = (
         Product.objects
         .filter(company=company)
@@ -112,52 +89,36 @@ def products_view(request):
 
     categories = Category.objects.all()
 
-    # =========================
-    # ANALYTICS (NEW 🔥)
-    # =========================
-
-    # LOW STOCK COUNT
+    # ================= ANALYTICS =================
     low_stock_count = products.filter(quantity__lte=5).count()
 
-    # INVENTORY VALUE (SAFE)
     inventory_value = products.aggregate(
         total=Coalesce(
             Sum(
                 ExpressionWrapper(
-                    F("quantity") * Coalesce(F("cost_price"), 0),
+                    F("quantity") * Coalesce(F("cost_price"), Value(0)),
                     output_field=DecimalField(max_digits=12, decimal_places=2)
                 )
             ),
-            0
+            Value(0)
         )
     )["total"]
 
-    # TOTAL PRODUCTS
-    total_products = products.count()
+    # ================= SMART ALERTS =================
+    smart_alerts = calculate_inventory_metrics(products, company)
 
-    # =========================
-    # CONTEXT
-    # =========================
     context = {
         "products": products,
         "categories": categories,
-
-        # PLAN INFO
-        "plan": company.subscription_plan,
-        "limit": PLAN_LIMITS.get(company.subscription_plan),
-
-        # ANALYTICS 🔥
         "low_stock_count": low_stock_count,
         "inventory_value": float(inventory_value or 0),
-        "total_products": total_products,
+        "total_products": products.count(),
+        "smart_alerts": smart_alerts,
     }
 
     return render(request, "products.html", context)
 
 
-# =========================
-# AJAX: PRODUCT PRICE
-# =========================
 @login_required
 def get_product_price(request, product_id):
     company = getattr(request.user, "company", None)
