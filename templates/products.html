@@ -43,9 +43,35 @@
   </div>
 
   <!-- CHART -->
-  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border">
-    <canvas id="stockChart"></canvas>
-  </div>
+  <script>
+
+  const ctx = document.getElementById('stockChart');
+
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [
+          {% for p in products %}
+            "{{ p.name|escapejs }}",
+          {% endfor %}
+        ],
+        datasets: [{
+          data: [
+            {% for p in products %}
+              {{ p.quantity|default:0 }},
+            {% endfor %}
+          ]
+        }]
+      }
+    });
+  }
+
+  function openModal(){
+    document.getElementById("productModal").classList.remove("hidden")
+  }
+
+  </script>>
 
   <!-- TABLE -->
   <table class="w-full text-sm">
