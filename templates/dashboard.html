@@ -1,185 +1,83 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<!-- =========================
-METRICS
-========================= -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+{% if error %}
+  <div class="bg-red-100 text-red-700 p-4 rounded mb-4">
+    Error: {{ error }}
+  </div>
+{% endif %}
 
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p class="text-gray-500 text-sm">Revenue</p>
-    <h2 class="text-2xl font-bold text-green-600">
-      ₦{{ total_revenue|floatformat:2 }}
+<!-- KPI -->
+<div class="grid md:grid-cols-3 gap-6 mb-6">
+  <div class="bg-white p-5 shadow rounded-xl">
+    <p>This Month</p>
+    <h2>₦{{ current_month_revenue|default:0|floatformat:2 }}</h2>
+  </div>
+
+  <div class="bg-white p-5 shadow rounded-xl">
+    <p>Last Month</p>
+    <h2>₦{{ previous_month_revenue|default:0|floatformat:2 }}</h2>
+  </div>
+
+  <div class="bg-white p-5 shadow rounded-xl">
+    <p>Growth</p>
+    <h2 class="{% if growth_rate >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+      {{ growth_rate|default:0|floatformat:2 }}%
     </h2>
   </div>
-
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p class="text-gray-500 text-sm">Cost</p>
-    <h2 class="text-2xl font-bold text-red-500">
-      ₦{{ total_cost|floatformat:2 }}
-    </h2>
-  </div>
-
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p class="text-gray-500 text-sm">Profit</p>
-    <h2 class="text-2xl font-bold {% if profit >= 0 %}text-indigo-600{% else %}text-red-600{% endif %}">
-      ₦{{ profit|floatformat:2 }}
-    </h2>
-  </div>
-
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p class="text-gray-500 text-sm">Total Sales</p>
-    <h2 class="text-2xl font-bold text-blue-600">
-      {{ total_sales }}
-    </h2>
-  </div>
-
 </div>
 
-<!-- =========================
-CHARTS
-========================= -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+<!-- ALERTS -->
+<div class="bg-yellow-50 p-4 mb-6 rounded-xl">
+  {% for alert in alerts %}
+    <p> {{ alert }}</p>
+  {% empty %}
+    <p>No alerts</p>
+  {% endfor %}
+</div>
 
-  <!-- Revenue Trend -->
-  <div class="bg-white p-6 rounded-xl shadow md:col-span-2">
-    <h3 class="font-semibold mb-4">Revenue Trend (30 days)</h3>
-    <canvas id="revenueChart"></canvas>
+<!-- TABLES -->
+<h3>Top Products</h3>
+{% for p in top_products %}
+  <div>{{ p.product__name|default:"N/A" }} - {{ p.total_qty|default:0 }}</div>
+{% empty %}
+  <p>No products</p>
+{% endfor %}
+
+<h3>Recent Sales</h3>
+{% for item in recent_sales %}
+  <div>
+    {{ item.product.name|default:"N/A" }} -
+    ₦{{ item.total_price|default:0|floatformat:2 }}
   </div>
+{% empty %}
+  <p>No sales</p>
+{% endfor %}
 
-  <!-- Profit Pie -->
-  <div class="bg-white p-6 rounded-xl shadow">
-    <h3 class="font-semibold mb-4">Profit Analysis</h3>
-    <canvas id="pieChart"></canvas>
-  </div>
-
-</div>
-
-<!-- =========================
-TOP PRODUCTS
-========================= -->
-<div class="bg-white p-6 rounded-xl shadow mb-6">
-
-  <h3 class="font-semibold mb-4">Top Selling Products</h3>
-
-  {% if top_products %}
-  <table class="w-full text-sm">
-    <thead class="text-gray-500">
-      <tr>
-        <th class="text-left">Product</th>
-        <th class="text-left">Qty Sold</th>
-        <th class="text-left">Revenue</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {% for p in top_products %}
-      <tr class="border-t">
-        <td class="py-2">{{ p.product__name }}</td>
-        <td>{{ p.total_qty }}</td>
-        <td class="text-green-600 font-semibold">
-          ₦{{ p.total_revenue|floatformat:2 }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-    <p class="text-gray-400">No product data yet</p>
-  {% endif %}
-
-</div>
-
-<!-- =========================
-RECENT SALES
-========================= -->
-<div class="bg-white p-6 rounded-xl shadow">
-
-  <h3 class="font-semibold mb-4">Recent Sales</h3>
-
-  {% if recent_sales %}
-    <table class="w-full text-sm">
-      <thead class="text-gray-500">
-        <tr>
-          <th class="text-left">Product</th>
-          <th class="text-left">Qty</th>
-          <th class="text-left">Amount</th>
-          <th class="text-left">Date</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {% for item in recent_sales %}
-        <tr class="border-t">
-          <td class="py-2">{{ item.product.name }}</td>
-          <td>{{ item.quantity }}</td>
-          <td class="text-green-600 font-semibold">
-            ₦{{ item.total_price|floatformat:2 }}
-          </td>
-          <td class="text-gray-400 text-xs">
-            {{ item.sale.created_at|date:"M d, H:i" }}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p class="text-gray-400 text-center py-6">
-      No sales yet
-    </p>
-  {% endif %}
-
-</div>
-
-<!-- =========================
-CHART JS
-========================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+const dates = JSON.parse('{{ sales_dates|default:"[]"|escapejs }}');
+const values = JSON.parse('{{ sales_values|default:"[]"|escapejs }}');
+const monthlyLabels = JSON.parse('{{ monthly_labels|default:"[]"|escapejs }}');
+const monthlyValues = JSON.parse('{{ monthly_values|default:"[]"|escapejs }}');
+const pieLabels = JSON.parse('{{ pie_labels|default:"[]"|escapejs }}');
+const pieValues = JSON.parse('{{ pie_values|default:"[]"|escapejs }}');
 
-// =========================
-// LINE CHART DATA
-// =========================
-const dates = {{ sales_dates|safe }};
-const revenueValues = {{ sales_values|safe }};
-const salesValues = {{ sales_count_values|safe };
-
-// =========================
-// PIE DATA
-// =========================
-const pieLabels = {{ pie_labels|safe }};
-const pieValues = {{ pie_values|safe };
-
-// =========================
-// REVENUE LINE CHART
-// =========================
-new Chart(document.getElementById('revenueChart'), {
+new Chart(document.getElementById('revenueChart') || document.createElement('canvas'), {
   type: 'line',
-  data: {
-    labels: dates,
-    datasets: [{
-      label: 'Revenue',
-      data: revenueValues,
-      tension: 0.4
-    }]
-  }
+  data: { labels: dates, datasets: [{ data: values }] }
 });
 
-// =========================
-// PIE CHART (PROFIT)
-// =========================
-new Chart(document.getElementById('pieChart'), {
+new Chart(document.getElementById('monthlyChart') || document.createElement('canvas'), {
+  type: 'bar',
+  data: { labels: monthlyLabels, datasets: [{ data: monthlyValues }] }
+});
+
+new Chart(document.getElementById('pieChart') || document.createElement('canvas'), {
   type: 'pie',
-  data: {
-    labels: pieLabels,
-    datasets: [{
-      data: pieValues
-    }]
-  }
+  data: { labels: pieLabels, datasets: [{ data: pieValues }] }
 });
-
 </script>
 
 {% endblock %}
