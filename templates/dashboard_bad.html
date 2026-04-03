@@ -1,81 +1,145 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- KPI -->
-<div class="grid md:grid-cols-3 gap-6 mb-6">
+{% if error %}
+<div class="bg-red-100 text-red-700 p-4 rounded mb-4">
+  Error: {{ error }}
+</div>
+{% endif %}
+
+<!-- ================= KPI ================= -->
+<div class="grid md:grid-cols-4 gap-6 mb-6">
+
   <div class="bg-white p-5 shadow rounded-xl">
-    <p>This Month</p>
-    <h2>₦{{ current_month_revenue|floatformat:2 }}</h2>
+    <p class="text-sm text-gray-500">Revenue</p>
+    <h2 class="text-xl font-bold text-green-600">
+      ₦{{ total_revenue|floatformat:2 }}
+    </h2>
   </div>
 
   <div class="bg-white p-5 shadow rounded-xl">
-    <p>Last Month</p>
-    <h2>₦{{ previous_month_revenue|floatformat:2 }}</h2>
+    <p class="text-sm text-gray-500">Cost</p>
+    <h2 class="text-xl font-bold text-red-500">
+      ₦{{ total_cost|floatformat:2 }}
+    </h2>
   </div>
 
   <div class="bg-white p-5 shadow rounded-xl">
-    <p>Growth</p>
+    <p class="text-sm text-gray-500">Profit</p>
+    <h2 class="text-xl font-bold {% if profit >= 0 %}text-indigo-600{% else %}text-red-600{% endif %}">
+      ₦{{ profit|floatformat:2 }}
+    </h2>
+  </div>
+
+  <div class="bg-white p-5 shadow rounded-xl">
+    <p class="text-sm text-gray-500">Growth</p>
     <h2 class="{% if growth_rate >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
       {{ growth_rate|floatformat:2 }}%
     </h2>
   </div>
+
 </div>
 
-<!-- ALERTS -->
+<!-- ================= ALERTS ================= -->
 <div class="bg-yellow-50 p-4 mb-6 rounded-xl">
   {% for alert in alerts %}
-    <p>⚠️ {{ alert }}</p>
+    <p>⚠ {{ alert }}</p>
   {% empty %}
     <p>No alerts</p>
   {% endfor %}
 </div>
 
-<!-- CHARTS -->
-<canvas id="revenueChart"></canvas>
-<canvas id="monthlyChart"></canvas>
-<canvas id="pieChart"></canvas>
+<!-- ================= CHARTS ================= -->
+<div class="grid md:grid-cols-3 gap-6 mb-6">
 
-<!-- TABLES -->
-<h3>Top Products</h3>
-{% for p in top_products %}
-  <div>{{ p.product__name }} - {{ p.total_qty }}</div>
-{% endfor %}
-
-<h3>Recent Sales</h3>
-{% for item in recent_sales %}
-  <div>
-    {{ item.product.name }} - ₦{{ item.total_price_calc|floatformat:2 }}
+  <div class="bg-white p-6 rounded-xl shadow md:col-span-2">
+    <h3 class="font-semibold mb-4">Daily Revenue</h3>
+    <canvas id="revenueChart"></canvas>
   </div>
-{% endfor %}
 
+  <div class="bg-white p-6 rounded-xl shadow">
+    <h3 class="font-semibold mb-4">Profit Analysis</h3>
+    <canvas id="pieChart"></canvas>
+  </div>
+
+</div>
+
+<div class="bg-white p-6 rounded-xl shadow mb-6">
+  <h3 class="font-semibold mb-4">Monthly Revenue</h3>
+  <canvas id="monthlyChart"></canvas>
+</div>
+
+<!-- ================= TABLES ================= -->
+<div class="grid md:grid-cols-2 gap-6">
+
+  <!-- Top Products -->
+  <div class="bg-white p-6 rounded-xl shadow">
+    <h3 class="font-semibold mb-4">Top Products</h3>
+
+    {% for p in top_products %}
+      <div class="flex justify-between border-b py-2">
+        <span>{{ p.product__name }}</span>
+        <span>{{ p.total_qty }}</span>
+      </div>
+    {% empty %}
+      <p>No products</p>
+    {% endfor %}
+  </div>
+
+  <!-- Recent Sales -->
+  <div class="bg-white p-6 rounded-xl shadow">
+    <h3 class="font-semibold mb-4">Recent Sales</h3>
+
+    {% for item in recent_sales %}
+      <div class="flex justify-between border-b py-2">
+        <span>{{ item.product.name }}</span>
+        <span class="text-green-600">
+          ₦{{ item.total_price|floatformat:2 }}
+        </span>
+      </div>
+    {% empty %}
+      <p>No sales</p>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- ================= CHART JS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 const dates = JSON.parse('{{ sales_dates|escapejs }}');
 const values = JSON.parse('{{ sales_values|escapejs }}');
-
 const monthlyLabels = JSON.parse('{{ monthly_labels|escapejs }}');
 const monthlyValues = JSON.parse('{{ monthly_values|escapejs }}');
-
 const pieLabels = JSON.parse('{{ pie_labels|escapejs }}');
 const pieValues = JSON.parse('{{ pie_values|escapejs }}');
 
-// Revenue Chart
+// Revenue
 new Chart(document.getElementById('revenueChart'), {
   type: 'line',
-  data: { labels: dates, datasets: [{ data: values }] }
+  data: {
+    labels: dates,
+    datasets: [{ data: values, tension: 0.4 }]
+  }
 });
 
-// Monthly Chart
+// Monthly
 new Chart(document.getElementById('monthlyChart'), {
   type: 'bar',
-  data: { labels: monthlyLabels, datasets: [{ data: monthlyValues }] }
+  data: {
+    labels: monthlyLabels,
+    datasets: [{ data: monthlyValues }]
+  }
 });
 
-// Pie Chart
+// Pie
 new Chart(document.getElementById('pieChart'), {
   type: 'pie',
-  data: { labels: pieLabels, datasets: [{ data: pieValues }] }
+  data: {
+    labels: pieLabels,
+    datasets: [{ data: pieValues }]
+  }
 });
 </script>
 

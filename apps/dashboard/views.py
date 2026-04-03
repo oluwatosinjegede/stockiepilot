@@ -30,7 +30,7 @@ def dashboard(request):
         ).select_related("product", "sale")
 
         # =========================
-        # COST CALCULATION (FIXED)
+        # COST CALCULATION
         # =========================
         cost_expr = ExpressionWrapper(
             F("quantity") * Coalesce(F("product__cost_price"), DECIMAL_ZERO),
@@ -38,7 +38,7 @@ def dashboard(request):
         )
 
         # =========================
-        # TOTALS (FIXED)
+        # TOTALS
         # =========================
         total_revenue = sales_qs.aggregate(
             total=Coalesce(Sum("total_amount"), DECIMAL_ZERO)
@@ -51,7 +51,7 @@ def dashboard(request):
         profit = total_revenue - total_cost
 
         # =========================
-        # DAILY TREND (FIXED)
+        # DAILY REVENUE TREND
         # =========================
         revenue_qs = (
             sales_qs
@@ -66,7 +66,41 @@ def dashboard(request):
         sales_values = [float(i["total"]) for i in revenue_qs]
 
         # =========================
-        # MONTHLY COMPARISON (FIXED)
+        # PROFIT TREND (NEW)
+        # =========================
+        profit_qs = (
+            sales_items_qs
+            .filter(sale__created_at__gte=last_30_days)
+            .annotate(date=TruncDate("sale__created_at"))
+            .values("date")
+            .annotate(
+                revenue=Coalesce(Sum("total_price"), DECIMAL_ZERO),
+                cost=Coalesce(Sum(cost_expr), DECIMAL_ZERO),
+            )
+            .order_by("date")
+        )
+
+        profit_dates = [str(i["date"]) for i in profit_qs]
+        profit_values = [
+            float(i["revenue"] - i["cost"]) for i in profit_qs
+        ]
+
+        # =========================
+        # MONTHLY TREND
+        # =========================
+        monthly_trend = (
+            sales_qs
+            .annotate(month=TruncMonth("created_at"))
+            .values("month")
+            .annotate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))
+            .order_by("month")
+        )
+
+        monthly_labels = [str(i["month"]) for i in monthly_trend]
+        monthly_values = [float(i["total"]) for i in monthly_trend]
+
+        # =========================
+        # MONTHLY GROWTH
         # =========================
         current_month = now().replace(day=1)
         previous_month = (current_month - timedelta(days=1)).replace(day=1)
@@ -89,27 +123,39 @@ def dashboard(request):
             growth_rate = 0.0
 
         # =========================
-        # MONTHLY TREND (FIXED)
+        # INVENTORY VALUE (NEW)
         # =========================
-        monthly_trend = (
-            sales_qs
-            .annotate(month=TruncMonth("created_at"))
-            .values("month")
-            .annotate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))
-            .order_by("month")
-        )
-
-        monthly_labels = [str(i["month"]) for i in monthly_trend]
-        monthly_values = [float(i["total"]) for i in monthly_trend]
+        inventory_value = Product.objects.filter(company=company).aggregate(
+            total=Coalesce(
+                Sum(
+                    ExpressionWrapper(
+                        F("quantity") * Coalesce(F("cost_price"), DECIMAL_ZERO),
+                        output_field=DecimalField(max_digits=12, decimal_places=2)
+                    )
+                ),
+                DECIMAL_ZERO
+            )
+        )["total"]
 
         # =========================
-        # TOP PRODUCTS (FIXED)
+        # DEAD STOCK (NEW)
+        # =========================
+        sold_products = SaleItem.objects.filter(
+            sale__company=company
+        ).values_list("product_id", flat=True)
+
+        dead_stock_count = Product.objects.filter(
+            company=company
+        ).exclude(id__in=sold_products).count()
+
+        # =========================
+        # TOP PRODUCTS
         # =========================
         top_products = (
             sales_items_qs
-            .values("product__id", "product__name")
+            .values("product__name")
             .annotate(
-                total_qty=Coalesce(Sum("quantity"), 0),  # int safe
+                total_qty=Coalesce(Sum("quantity"), 0),
                 total_revenue=Coalesce(Sum("total_price"), DECIMAL_ZERO)
             )
             .order_by("-total_qty")[:5]
@@ -131,24 +177,30 @@ def dashboard(request):
         ).count()
 
         # =========================
-        # ALERTS
+        # ALERTS (SMART)
         # =========================
         alerts = []
 
         if low_stock > 0:
             alerts.append(f"{low_stock} products are low on stock")
 
+        if profit < 0:
+            alerts.append("You are running at a LOSS")
+
         if current_month_revenue < previous_month_revenue:
             alerts.append("Revenue dropped compared to last month")
 
-        if profit < 0:
-            alerts.append("You are running at a loss")
+        if dead_stock_count > 0:
+            alerts.append(f"{dead_stock_count} products have never been sold")
+
+        if inventory_value > total_revenue:
+            alerts.append("Too much money tied in inventory")
 
         if total_sales == 0:
             alerts.append("No sales recorded yet")
 
         # =========================
-        # PIE DATA
+        # PIE CHART
         # =========================
         pie_labels = ["Revenue", "Cost", "Profit"]
         pie_values = [
@@ -161,22 +213,24 @@ def dashboard(request):
             "total_revenue": float(total_revenue),
             "total_cost": float(total_cost),
             "profit": float(profit),
-            "total_sales": float(total_sales),
+            "inventory_value": float(inventory_value),
 
-            "current_month_revenue": current_month_revenue,
-            "previous_month_revenue": previous_month_revenue,
             "growth_rate": float(growth_rate),
-
             "alerts": alerts,
 
             "sales_dates": json.dumps(sales_dates),
             "sales_values": json.dumps(sales_values),
+
+            "profit_dates": json.dumps(profit_dates),
+            "profit_values": json.dumps(profit_values),
 
             "monthly_labels": json.dumps(monthly_labels),
             "monthly_values": json.dumps(monthly_values),
 
             "pie_labels": json.dumps(pie_labels),
             "pie_values": json.dumps(pie_values),
+
+            "dead_stock_count": dead_stock_count,
 
             "top_products": top_products,
             "recent_sales": recent_sales,
