@@ -44,8 +44,10 @@
 <h3>Recent Sales</h3>
 {% for item in recent_sales %}
   <div>
-    {{ item.product.name }} - ₦{{ item.total_price|floatformat:2 }}
+    {{ item.product.name|default:"N/A" }} - ₦{{ item.total_price|default:0|floatformat:2 }}
   </div>
+{% empty %}
+  <p>No sales</p>
 {% endfor %}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
