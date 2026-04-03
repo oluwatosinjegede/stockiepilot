@@ -6,7 +6,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Value
 from django.db.models.functions import Coalesce
 
 from apps.subscriptions.views import Plans
@@ -53,14 +54,18 @@ def products_view(request):
         try:
             price = Decimal(price)
             quantity = int(quantity)
-        except:
+
+            if price <= 0 or quantity < 0:
+                raise ValueError
+
+        except (InvalidOperation, ValueError):
             messages.error(request, "Invalid input.")
             return redirect("products")
 
         category = Category.objects.filter(id=category_id).first() if category_id else None
 
         if Product.objects.filter(company=company, name__iexact=name).exists():
-            messages.error(request, "Product exists.")
+            messages.error(request, "Product already exists.")
             return redirect("products")
 
         Product.objects.create(
@@ -68,15 +73,21 @@ def products_view(request):
             name=name,
             category=category,
             selling_price=price,
-            cost_price=price,
+            cost_price=price,  # fallback
             quantity=quantity,
             sku=f"SKU-{company.id}-{name[:5].upper()}"
         )
 
+        messages.success(request, "Product created successfully.")
         return redirect("products")
 
     # ================= FETCH =================
-    products = Product.objects.filter(company=company).select_related("category")
+    products = (
+        Product.objects
+        .filter(company=company)
+        .select_related("category")
+        .order_by("-id")
+    )
 
     categories = Category.objects.all()
 
@@ -87,15 +98,15 @@ def products_view(request):
         total=Coalesce(
             Sum(
                 ExpressionWrapper(
-                    F("quantity") * Coalesce(F("cost_price"), 0),
+                    F("quantity") * Coalesce(F("cost_price"), Value(0)),
                     output_field=DecimalField(max_digits=12, decimal_places=2)
                 )
             ),
-            0
+            Value(0)
         )
     )["total"]
 
-    # ================= SMART AUTOMATION =================
+    # ================= SMART ALERTS =================
     smart_alerts = calculate_inventory_metrics(products, company)
 
     context = {
@@ -113,6 +124,9 @@ def products_view(request):
 @login_required
 def get_product_price(request, product_id):
     company = getattr(request.user, "company", None)
+
+    if not company:
+        return JsonResponse({"error": "Unauthorized"}, status=403)
 
     product = get_object_or_404(Product, id=product_id, company=company)
 

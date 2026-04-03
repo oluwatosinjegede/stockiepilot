@@ -7,7 +7,6 @@ from apps.sales.models import SaleItem
 
 
 def calculate_inventory_metrics(products, company):
-
     last_30_days = now() - timedelta(days=30)
 
     alerts = []
@@ -26,6 +25,7 @@ def calculate_inventory_metrics(products, company):
 
         velocity = sales / 30 if sales else 0
 
+        # ALERT RULES
         if product.quantity <= 5:
             alerts.append(f"⚠️ Low stock: {product.name}")
 
