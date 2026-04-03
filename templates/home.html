@@ -1,38 +1,34 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>StockiePilot</title>
+{% extends "base.html" %}
 
-  <script src="https://cdn.tailwindcss.com"></script>
+{% block content %}
 
-</head>
+<div class="max-w-4xl mx-auto text-center py-20">
 
-<body class="bg-gradient-to-r from-indigo-600 to-blue-500 text-white">
-
-<div class="h-screen flex flex-col justify-center items-center text-center">
-
-  <h1 class="text-5xl font-bold mb-4">
-    🚀 Welcome to StockiePilot
+  <!-- TITLE -->
+  <h1 class="text-4xl md:text-5xl font-bold mb-4">
+    Welcome to StockiePilot
   </h1>
 
-  <p class="text-lg mb-6">
-    Smart Inventory & Sales Management for Modern Businesses
+  <!-- SUBTEXT -->
+  <p class="text-slate-500 dark:text-slate-400 text-lg mb-8">
+    Smart Inventory & Sales Management for modern businesses
   </p>
 
-  <div class="flex gap-4">
+  <!-- ACTION BUTTONS -->
+  <div class="flex justify-center gap-4 flex-wrap">
+
     <a href="{% url 'dashboard' %}"
-       class="bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold">
+       class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition">
       Go to Dashboard
     </a>
 
     <a href="{% url 'login' %}"
-       class="border border-white px-6 py-3 rounded-lg">
+       class="border border-slate-300 dark:border-slate-600 px-6 py-3 rounded-lg font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition">
       Login
     </a>
+
   </div>
 
 </div>
 
-</body>
-</html>
+{% endblock %}

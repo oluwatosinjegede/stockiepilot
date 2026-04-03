@@ -2,77 +2,87 @@
 
 {% block content %}
 
-<div class="flex justify-between items-center mb-6">
-  <h2 class="text-2xl font-bold">Sales</h2>
+<div class="space-y-6">
 
-  <a href="{% url 'create_sale' %}"
-     class="bg-green-600 text-white px-4 py-2 rounded-lg">
-    + New Sale
-  </a>
-</div>
+  <!-- HEADER -->
+  <div class="flex justify-between items-center">
+    <h2 class="text-xl font-semibold">Sales</h2>
 
-<div class="bg-white rounded-2xl shadow overflow-hidden">
+    <a href="{% url 'create_sale' %}"
+       class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+      + New Sale
+    </a>
+  </div>
 
-  <table class="w-full text-sm">
+  <!-- TABLE CARD -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
 
-    <thead class="bg-gray-100 text-gray-600">
-      <tr>
-        <th class="p-3 text-left">Product</th>
-        <th class="p-3 text-left">Quantity</th>
-        <th class="p-3 text-left">Total Price</th>
-        <th class="p-3 text-left">Status</th>
-        <th class="p-3 text-left">Date</th>
-      </tr>
-    </thead>
+    <table class="w-full text-sm">
 
-    <tbody>
-      {% for item in sales %}
-      <tr class="border-b hover:bg-gray-50 transition">
+      <!-- HEADER -->
+      <thead class="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-300">
+        <tr>
+          <th class="p-3 text-left">Product</th>
+          <th class="p-3 text-left">Quantity</th>
+          <th class="p-3 text-left">Total Price</th>
+          <th class="p-3 text-left">Status</th>
+          <th class="p-3 text-left">Date</th>
+        </tr>
+      </thead>
 
-        <!-- PRODUCT -->
-        <td class="p-3 font-medium">
-          {{ item.product.name }}
-        </td>
+      <!-- BODY -->
+      <tbody>
 
-        <!-- QUANTITY -->
-        <td class="p-3">
-          {{ item.quantity }}
-        </td>
+        {% for item in sales %}
+        <tr class="border-t hover:bg-slate-50 dark:hover:bg-slate-700 transition">
 
-        <!-- TOTAL -->
-        <td class="p-3 text-green-600 font-semibold">
-          ₦{{ item.total_price|floatformat:2 }}
-        </td>
+          <!-- PRODUCT -->
+          <td class="p-3 font-medium">
+            {{ item.product.name }}
+          </td>
 
-        <!-- STATUS -->
-        <td class="p-3">
-          <span class="px-2 py-1 rounded text-xs
-            {% if item.sale.status == 'completed' %}
-              bg-green-100 text-green-700
-            {% else %}
-              bg-yellow-100 text-yellow-700
-            {% endif %}
-          ">
-            {{ item.sale.status }}
-          </span>
-        </td>
+          <!-- QUANTITY -->
+          <td class="p-3">
+            {{ item.quantity }}
+          </td>
 
-        <!-- DATE -->
-        <td class="p-3 text-gray-500 whitespace-nowrap">
-          {{ item.sale.created_at|date:"M d, Y H:i" }}
-        </td>
+          <!-- TOTAL -->
+          <td class="p-3 font-semibold text-green-600 dark:text-green-400">
+            ₦{{ item.total_price|floatformat:2 }}
+          </td>
 
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="5" class="p-6 text-center text-gray-500">
-          No sales recorded yet
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
+          <!-- STATUS -->
+          <td class="p-3">
+            <span class="px-2 py-1 rounded-md text-xs font-medium
+              {% if item.sale.status == 'completed' %}
+                bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+              {% else %}
+                bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
+              {% endif %}
+            ">
+              {{ item.sale.status|title }}
+            </span>
+          </td>
 
-  </table>
+          <!-- DATE -->
+          <td class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+            {{ item.sale.created_at|date:"M d, Y H:i" }}
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="p-10 text-center text-slate-400">
+            No sales recorded yet
+          </td>
+        </tr>
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
 
 </div>
 
