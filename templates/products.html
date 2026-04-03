@@ -4,83 +4,113 @@
 
 <div class="space-y-6">
 
-  <!-- HEADER -->
-  <div class="flex justify-between items-center">
-    <h2 class="text-xl font-semibold">Products</h2>
+  <!-- SMART ALERTS -->
+  {% if smart_alerts %}
+  <div class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 p-3 rounded-lg">
+    <strong>Smart Alerts</strong>
+    {% for alert in smart_alerts %}
+      <div>{{ alert }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
-    <button onclick="openModal()"
-      class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-      + Add Product
-    </button>
+  <!-- HEADER -->
+  <div class="flex flex-wrap justify-between items-center gap-4">
+    <h2 class="text-xl font-semibold">Inventory Analytics</h2>
+
+    <div class="flex gap-2">
+
+      <!-- SEARCH -->
+      <input id="searchInput"
+        placeholder="Search products..."
+        class="px-3 py-2 border rounded-lg text-sm dark:bg-slate-800 dark:border-slate-600">
+
+      <!-- ADD -->
+      <button onclick="openModal()"
+        class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
+        + Add Product
+      </button>
+
+    </div>
   </div>
 
-  <!-- TABLE CARD -->
+  <!-- KPI CARDS -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+      <p class="text-slate-500 text-sm">Total Products</p>
+      <h3 class="text-xl font-semibold">{{ total_products }}</h3>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+      <p class="text-slate-500 text-sm">Low Stock Items</p>
+      <h3 class="text-xl font-semibold text-red-500">
+        {{ low_stock_count|default:0 }}
+      </h3>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+      <p class="text-slate-500 text-sm">Inventory Value</p>
+      <h3 class="text-xl font-semibold">
+        ₦{{ inventory_value|default:0|floatformat:2 }}
+      </h3>
+    </div>
+
+  </div>
+
+  <!-- CHART -->
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+    <h4 class="font-semibold mb-2">Stock Distribution</h4>
+    <canvas id="stockChart"></canvas>
+  </div>
+
+  <!-- TABLE -->
   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
 
-    <table class="w-full text-sm">
+    <table class="w-full text-sm" id="productTable">
 
-      <!-- HEADER -->
-      <thead class="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-300">
+      <thead class="bg-slate-50 dark:bg-slate-700 text-slate-500">
         <tr>
           <th class="p-3 text-left">Product</th>
           <th class="p-3 text-left">Category</th>
           <th class="p-3 text-left">Price</th>
           <th class="p-3 text-left">Stock</th>
-          <th class="p-3 text-right pr-4">Actions</th>
         </tr>
       </thead>
 
-      <!-- BODY -->
       <tbody>
 
-        {% if products %}
-          {% for p in products %}
-          <tr class="border-t hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+        {% for p in products %}
+        <tr class="border-t hover:bg-slate-50 dark:hover:bg-slate-700">
 
-            <!-- PRODUCT -->
-            <td class="p-3 font-medium">
-              {{ p.name }}
-            </td>
+          <td class="p-3 font-medium">{{ p.name }}</td>
 
-            <!-- CATEGORY -->
-            <td class="p-3 text-slate-500 dark:text-slate-400">
-              {{ p.category.name|default:"Uncategorized" }}
-            </td>
+          <td class="p-3 text-slate-500">
+            {{ p.category.name|default:"Uncategorized" }}
+          </td>
 
-            <!-- PRICE -->
-            <td class="p-3 font-semibold text-indigo-600 dark:text-indigo-400">
-              ₦{{ p.selling_price|floatformat:2 }}
-            </td>
+          <td class="p-3 text-indigo-600 font-semibold">
+            ₦{{ p.selling_price|floatformat:2 }}
+          </td>
 
-            <!-- STOCK -->
-            <td class="p-3">
-              {% if p.quantity <= 5 %}
-                <span class="text-red-500 font-medium">
-                  {{ p.quantity }} (Low)
-                </span>
-              {% else %}
-                <span class="text-slate-700 dark:text-slate-300">
-                  {{ p.quantity }}
-                </span>
-              {% endif %}
-            </td>
+          <td class="p-3">
+            {% if p.quantity <= 5 %}
+              <span class="text-red-500 font-medium">
+                {{ p.quantity }} (Low)
+              </span>
+            {% else %}
+              {{ p.quantity }}
+            {% endif %}
+          </td>
 
-            <!-- ACTIONS -->
-            <td class="p-3 text-right pr-4 space-x-3">
-              <a href="#" class="text-indigo-600 hover:underline text-sm">Edit</a>
-              <a href="#" class="text-red-500 hover:underline text-sm">Delete</a>
-            </td>
-
-          </tr>
-          {% endfor %}
-
-        {% else %}
-          <tr>
-            <td colspan="5" class="text-center py-10 text-slate-400">
-              No products yet. Click “Add Product” to get started.
-            </td>
-          </tr>
-        {% endif %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="text-center p-6 text-slate-400">
+            No products available
+          </td>
+        </tr>
+        {% endfor %}
 
       </tbody>
 
@@ -94,87 +124,82 @@
 <div id="productModal"
      class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
 
-  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl w-96 shadow-lg border border-slate-200 dark:border-slate-700">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl w-96 shadow-lg">
 
     <h3 class="text-lg font-semibold mb-4">Add Product</h3>
 
     <form method="POST">
       {% csrf_token %}
 
-      <!-- NAME -->
-      <input name="name"
-             placeholder="Product Name"
-             required
-             class="w-full p-2 mb-3 border border-slate-300 rounded-lg dark:bg-slate-700 dark:border-slate-600">
+      <input name="name" placeholder="Product Name"
+        class="w-full p-2 mb-3 border rounded dark:bg-slate-700">
 
-      <!-- CATEGORY -->
       <select name="category"
-              class="w-full p-2 mb-3 border border-slate-300 rounded-lg dark:bg-slate-700 dark:border-slate-600">
-        <option value="">Select Category</option>
-
+        class="w-full p-2 mb-3 border rounded dark:bg-slate-700">
         {% for c in categories %}
           <option value="{{ c.id }}">{{ c.name }}</option>
         {% endfor %}
       </select>
 
-      <!-- PRICE -->
-      <input name="price"
-             placeholder="Selling Price"
-             type="number"
-             step="0.01"
-             required
-             class="w-full p-2 mb-3 border border-slate-300 rounded-lg dark:bg-slate-700 dark:border-slate-600">
+      <input name="price" type="number" step="0.01"
+        placeholder="Price"
+        class="w-full p-2 mb-3 border rounded dark:bg-slate-700">
 
-      <!-- QUANTITY -->
-      <input name="quantity"
-             placeholder="Stock Quantity"
-             type="number"
-             required
-             class="w-full p-2 mb-4 border border-slate-300 rounded-lg dark:bg-slate-700 dark:border-slate-600">
+      <input name="quantity" type="number"
+        placeholder="Quantity"
+        class="w-full p-2 mb-4 border rounded dark:bg-slate-700">
 
-      <div class="flex justify-end gap-3">
-
-        <button type="button"
-                onclick="closeModal()"
-                class="px-4 py-2 bg-slate-200 dark:bg-slate-600 rounded-lg text-sm">
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-300 rounded">
           Cancel
         </button>
-
-        <button type="submit"
-                class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition">
+        <button class="px-4 py-2 bg-indigo-600 text-white rounded">
           Save
         </button>
-
       </div>
 
     </form>
 
   </div>
-
 </div>
 
-<!-- SCRIPT -->
+<!-- JS -->
 <script>
 
-function openModal() {
-  const modal = document.getElementById("productModal");
-  modal.classList.remove("hidden");
-  modal.classList.add("flex");
+// SAFE SEARCH
+const searchInput = document.getElementById("searchInput")
+if (searchInput) {
+  searchInput.addEventListener("keyup", function() {
+    let value = this.value.toLowerCase()
+    document.querySelectorAll("#productTable tbody tr").forEach(row => {
+      row.style.display = row.innerText.toLowerCase().includes(value) ? "" : "none"
+    })
+  })
 }
 
-function closeModal() {
-  const modal = document.getElementById("productModal");
-  modal.classList.add("hidden");
-  modal.classList.remove("flex");
+// MODAL
+function openModal(){
+  document.getElementById("productModal").classList.replace("hidden","flex")
+}
+function closeModal(){
+  document.getElementById("productModal").classList.replace("flex","hidden")
 }
 
-// SAFE OUTSIDE CLICK
-window.addEventListener("click", function(e) {
-  const modal = document.getElementById("productModal");
-  if (e.target === modal) {
-    closeModal();
-  }
-});
+// SAFE CHART
+const ctx = document.getElementById('stockChart')
+
+if (ctx) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: [{% for p in products %}"{{ p.name|escapejs }}",{% endfor %}],
+      datasets: [{
+        label: 'Stock',
+        data: [{% for p in products %}{{ p.quantity }},{% endfor %}]
+      }]
+    }
+  })
+}
 
 </script>
 
