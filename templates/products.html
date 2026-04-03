@@ -4,16 +4,6 @@
 
 <div class="space-y-6">
 
-  <!-- SMART ALERTS -->
-  {% if smart_alerts %}
-  <div class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 p-3 rounded-lg">
-    <strong>Smart Alerts</strong>
-    {% for alert in smart_alerts %}
-      <div>{{ alert }}</div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
   <!-- HEADER -->
   <div class="flex flex-wrap justify-between items-center gap-4">
     <h2 class="text-xl font-semibold">Inventory Analytics</h2>
@@ -27,7 +17,7 @@
 
       <!-- ADD -->
       <button onclick="openModal()"
-        class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
+        class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
         + Add Product
       </button>
 
@@ -37,19 +27,19 @@
   <!-- KPI CARDS -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+    <div class="card">
       <p class="text-slate-500 text-sm">Total Products</p>
-      <h3 class="text-xl font-semibold">{{ total_products }}</h3>
+      <h3 class="text-xl font-semibold">{{ products|length }}</h3>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+    <div class="card">
       <p class="text-slate-500 text-sm">Low Stock Items</p>
       <h3 class="text-xl font-semibold text-red-500">
         {{ low_stock_count|default:0 }}
       </h3>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+    <div class="card">
       <p class="text-slate-500 text-sm">Inventory Value</p>
       <h3 class="text-xl font-semibold">
         ₦{{ inventory_value|default:0|floatformat:2 }}
@@ -59,13 +49,13 @@
   </div>
 
   <!-- CHART -->
-  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+  <div class="card">
     <h4 class="font-semibold mb-2">Stock Distribution</h4>
     <canvas id="stockChart"></canvas>
   </div>
 
   <!-- TABLE -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+  <div class="card overflow-hidden">
 
     <table class="w-full text-sm" id="productTable">
 
@@ -120,7 +110,7 @@
 
 </div>
 
-<!-- MODAL -->
+<!-- MODAL (UNCHANGED BUT SAFER) -->
 <div id="productModal"
      class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
 
@@ -166,16 +156,13 @@
 <!-- JS -->
 <script>
 
-// SAFE SEARCH
-const searchInput = document.getElementById("searchInput")
-if (searchInput) {
-  searchInput.addEventListener("keyup", function() {
-    let value = this.value.toLowerCase()
-    document.querySelectorAll("#productTable tbody tr").forEach(row => {
-      row.style.display = row.innerText.toLowerCase().includes(value) ? "" : "none"
-    })
+// SEARCH
+document.getElementById("searchInput").addEventListener("keyup", function() {
+  let value = this.value.toLowerCase()
+  document.querySelectorAll("#productTable tbody tr").forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(value) ? "" : "none"
   })
-}
+})
 
 // MODAL
 function openModal(){
@@ -185,21 +172,19 @@ function closeModal(){
   document.getElementById("productModal").classList.replace("flex","hidden")
 }
 
-// SAFE CHART
-const ctx = document.getElementById('stockChart')
+// CHART
+const labels = {{ products|length }} > 0 ? {{ products|safe }} : []
 
-if (ctx) {
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: [{% for p in products %}"{{ p.name|escapejs }}",{% endfor %}],
-      datasets: [{
-        label: 'Stock',
-        data: [{% for p in products %}{{ p.quantity }},{% endfor %}]
-      }]
-    }
-  })
-}
+new Chart(document.getElementById('stockChart'), {
+  type: 'bar',
+  data: {
+    labels: [{% for p in products %}"{{ p.name }}",{% endfor %}],
+    datasets: [{
+      label: 'Stock',
+      data: [{% for p in products %}{{ p.quantity }},{% endfor %}]
+    }]
+  }
+})
 
 </script>
 
