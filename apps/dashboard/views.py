@@ -2,7 +2,6 @@
 
 import json
 import logging
-import numpy as np
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
@@ -82,10 +81,25 @@ def dashboard(request):
         forecast_dates, forecast_values = [], []
 
         if len(sales_values) >= 2:
-            y = np.array(sales_values)
-            x = np.arange(len(y))
+            n = len(sales_values)
 
-            m, c = np.polyfit(x, y, 1)
+        if n >= 2:
+            x = list(range(n))
+            y = sales_values
+
+            x_mean = sum(x) / n
+            y_mean = sum(y) / n
+
+            numerator = sum((x[i] - x_mean) * (y[i] - y_mean) for i in range(n))
+            denominator = sum((x[i] - x_mean) ** 2 for i in range(n))
+
+            m = numerator / denominator if denominator != 0 else 0
+            c = y_mean - m * x_mean
+
+            forecast_values = [
+                max(0, m * i + c)
+                for i in range(n, n + forecast_days)
+            ]
 
             future_x = np.arange(len(y), len(y) + forecast_days)
             forecast_values = [max(0, float(m * i + c)) for i in future_x]
