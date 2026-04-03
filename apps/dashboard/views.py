@@ -1,10 +1,9 @@
-# apps/dashboard/views.py
-
 import json
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, F, DecimalField, ExpressionWrapper
-from django.db.models.functions import TruncDate, Coalesce
+from django.db.models.functions import TruncDate
 from django.utils.timezone import now, timedelta
 
 from apps.sales.models import Sale, SaleItem
@@ -18,46 +17,31 @@ def dashboard(request):
     if not company:
         return redirect("login")
 
+    # =========================
+    # DATE RANGE
+    # =========================
     last_30_days = now() - timedelta(days=30)
 
     # =========================
-    # BASE QUERYSETS
+    # BASE QUERYSETS (REUSE)
     # =========================
     sales_qs = Sale.objects.filter(company=company)
-
-    sales_items_qs = SaleItem.objects.filter(
-        sale__company=company
-    ).select_related("product", "sale")
+    sales_items_qs = SaleItem.objects.filter(sale__company=company).select_related("product", "sale")
 
     # =========================
-    # SAFE EXPRESSIONS
-    # =========================
-    revenue_expr = Coalesce(F("total_amount"), 0)
-
-    cost_expr = ExpressionWrapper(
-        F("quantity") * Coalesce(F("product__cost_price"), 0),
-        output_field=DecimalField(max_digits=12, decimal_places=2)
-    )
-
-    item_total_expr = ExpressionWrapper(
-        F("quantity") * Coalesce(F("price"), 0),
-        output_field=DecimalField(max_digits=12, decimal_places=2)
-    )
-
-    # =========================
-    # REVENUE TREND
+    # REVENUE TREND (DAILY)
     # =========================
     revenue_qs = (
         sales_qs
         .filter(created_at__gte=last_30_days)
         .annotate(date=TruncDate("created_at"))
         .values("date")
-        .annotate(total=Coalesce(Sum("total_amount"), 0))
+        .annotate(total=Sum("total_amount"))
         .order_by("date")
     )
 
-    sales_dates = [str(i["date"]) for i in revenue_qs]
-    sales_values = [float(i["total"]) for i in revenue_qs]
+    sales_dates = [str(item["date"]) for item in revenue_qs]
+    sales_values = [float(item["total"] or 0) for item in revenue_qs]
 
     # =========================
     # SALES COUNT TREND
@@ -71,45 +55,59 @@ def dashboard(request):
         .order_by("date")
     )
 
-    sales_count_values = [i["count"] for i in sales_count_qs]
+    sales_count_values = [item["count"] for item in sales_count_qs]
 
     # =========================
-    # TOTALS
+    # COST CALCULATION (DB LEVEL)
+    # =========================
+    cost_expression = ExpressionWrapper(
+        F("quantity") * F("product__cost_price"),
+        output_field=DecimalField(max_digits=12, decimal_places=2)
+    )
+
+    # =========================
+    # TOTALS (REVENUE / COST / PROFIT)
     # =========================
     total_revenue = sales_qs.aggregate(
-        total=Coalesce(Sum("total_amount"), 0)
-    )["total"]
+        total=Sum("total_amount")
+    )["total"] or 0
 
     total_cost = sales_items_qs.aggregate(
-        total=Coalesce(Sum(cost_expr), 0)
-    )["total"]
+        total=Sum(cost_expression)
+    )["total"] or 0
 
     profit = total_revenue - total_cost
 
     # =========================
-    # TOP PRODUCTS (Postgres-safe)
+    # PIE CHART DATA
+    # =========================
+    pie_labels = ["Revenue", "Cost", "Profit"]
+    pie_values = [
+        float(total_revenue),
+        float(total_cost),
+        float(profit)
+    ]
+
+    # =========================
+    # TOP PRODUCTS
     # =========================
     top_products = (
         sales_items_qs
-        .values("product__id", "product__name")
+        .values("product__name")
         .annotate(
-            total_qty=Coalesce(Sum("quantity"), 0),
-            total_revenue=Coalesce(Sum(item_total_expr), 0)
+            total_qty=Sum("quantity"),
+            total_revenue=Sum("total_price")
         )
         .order_by("-total_qty")[:5]
     )
 
     # =========================
-    # RECENT SALES (with computed total)
+    # RECENT SALES
     # =========================
-    recent_sales = (
-        sales_items_qs
-        .annotate(total_price_calc=item_total_expr)
-        .order_by("-sale__created_at")[:10]
-    )
+    recent_sales = sales_items_qs.order_by("-sale__created_at")[:10]
 
     # =========================
-    # METRICS
+    # BASIC METRICS
     # =========================
     total_sales = sales_qs.count()
 
@@ -120,22 +118,15 @@ def dashboard(request):
         quantity__lte=5
     ).count()
 
-    sales_last_30_days = sales_qs.filter(
-        created_at__gte=last_30_days
-    ).aggregate(
-        total=Coalesce(Sum("total_amount"), 0)
-    )["total"]
+    sales_last_30_days = (
+        sales_qs
+        .filter(created_at__gte=last_30_days)
+        .aggregate(total=Sum("total_amount"))["total"] or 0
+    )
 
     # =========================
-    # PIE DATA
+    # CONTEXT (JSON SAFE)
     # =========================
-    pie_labels = ["Revenue", "Cost", "Profit"]
-    pie_values = [
-        float(total_revenue),
-        float(total_cost),
-        float(profit)
-    ]
-
     return render(request, "dashboard.html", {
 
         # Metrics
@@ -147,11 +138,12 @@ def dashboard(request):
         "low_stock": low_stock,
         "sales_last_30_days": sales_last_30_days,
 
-        # Charts
+        # Line Charts
         "sales_dates": json.dumps(sales_dates),
         "sales_values": json.dumps(sales_values),
         "sales_count_values": json.dumps(sales_count_values),
 
+        # Pie Chart
         "pie_labels": json.dumps(pie_labels),
         "pie_values": json.dumps(pie_values),
 

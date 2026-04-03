@@ -1,6 +1,10 @@
 {% extends "base.html" %}
+
 {% block content %}
 
+<!-- =========================
+METRICS
+========================= -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
 
   <div class="bg-white p-5 rounded-xl shadow">
@@ -33,13 +37,18 @@
 
 </div>
 
+<!-- =========================
+CHARTS
+========================= -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
 
+  <!-- Revenue Trend -->
   <div class="bg-white p-6 rounded-xl shadow md:col-span-2">
-    <h3 class="font-semibold mb-4">Revenue Trend</h3>
+    <h3 class="font-semibold mb-4">Revenue Trend (30 days)</h3>
     <canvas id="revenueChart"></canvas>
   </div>
 
+  <!-- Profit Pie -->
   <div class="bg-white p-6 rounded-xl shadow">
     <h3 class="font-semibold mb-4">Profit Analysis</h3>
     <canvas id="pieChart"></canvas>
@@ -47,49 +56,105 @@
 
 </div>
 
-<!-- TOP PRODUCTS -->
+<!-- =========================
+TOP PRODUCTS
+========================= -->
 <div class="bg-white p-6 rounded-xl shadow mb-6">
-  <h3 class="font-semibold mb-4">Top Products</h3>
+
+  <h3 class="font-semibold mb-4">Top Selling Products</h3>
 
   {% if top_products %}
   <table class="w-full text-sm">
-    {% for p in top_products %}
-    <tr class="border-t">
-      <td class="py-2">{{ p.product__name }}</td>
-      <td>{{ p.total_qty }}</td>
-      <td>₦{{ p.total_revenue|floatformat:2 }}</td>
-    </tr>
-    {% endfor %}
+    <thead class="text-gray-500">
+      <tr>
+        <th class="text-left">Product</th>
+        <th class="text-left">Qty Sold</th>
+        <th class="text-left">Revenue</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for p in top_products %}
+      <tr class="border-t">
+        <td class="py-2">{{ p.product__name }}</td>
+        <td>{{ p.total_qty }}</td>
+        <td class="text-green-600 font-semibold">
+          ₦{{ p.total_revenue|floatformat:2 }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
   </table>
   {% else %}
-    <p class="text-gray-400">No data</p>
+    <p class="text-gray-400">No product data yet</p>
   {% endif %}
+
 </div>
 
-<!-- RECENT SALES -->
+<!-- =========================
+RECENT SALES
+========================= -->
 <div class="bg-white p-6 rounded-xl shadow">
+
   <h3 class="font-semibold mb-4">Recent Sales</h3>
 
-  {% for item in recent_sales %}
-  <div class="flex justify-between border-t py-2">
-    <span>{{ item.product.name }}</span>
-    <span>{{ item.quantity }}</span>
-    <span>₦{{ item.total_price_calc|floatformat:2 }}</span>
-  </div>
-  {% empty %}
-    <p class="text-gray-400">No sales yet</p>
-  {% endfor %}
+  {% if recent_sales %}
+    <table class="w-full text-sm">
+      <thead class="text-gray-500">
+        <tr>
+          <th class="text-left">Product</th>
+          <th class="text-left">Qty</th>
+          <th class="text-left">Amount</th>
+          <th class="text-left">Date</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for item in recent_sales %}
+        <tr class="border-t">
+          <td class="py-2">{{ item.product.name }}</td>
+          <td>{{ item.quantity }}</td>
+          <td class="text-green-600 font-semibold">
+            ₦{{ item.total_price|floatformat:2 }}
+          </td>
+          <td class="text-gray-400 text-xs">
+            {{ item.sale.created_at|date:"M d, H:i" }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-gray-400 text-center py-6">
+      No sales yet
+    </p>
+  {% endif %}
+
 </div>
 
+<!-- =========================
+CHART JS
+========================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const dates = JSON.parse('{{ sales_dates|escapejs }}');
-const revenueValues = JSON.parse('{{ sales_values|escapejs }}');
-const pieLabels = JSON.parse('{{ pie_labels|escapejs }}');
-const pieValues = JSON.parse('{{ pie_values|escapejs }}');
 
-// LINE CHART
+// =========================
+// LINE CHART DATA
+// =========================
+const dates = {{ sales_dates|safe }};
+const revenueValues = {{ sales_values|safe }};
+const salesValues = {{ sales_count_values|safe };
+
+// =========================
+// PIE DATA
+// =========================
+const pieLabels = {{ pie_labels|safe }};
+const pieValues = {{ pie_values|safe };
+
+// =========================
+// REVENUE LINE CHART
+// =========================
 new Chart(document.getElementById('revenueChart'), {
   type: 'line',
   data: {
@@ -97,13 +162,14 @@ new Chart(document.getElementById('revenueChart'), {
     datasets: [{
       label: 'Revenue',
       data: revenueValues,
-      borderWidth: 2,
       tension: 0.4
     }]
   }
 });
 
-// PIE CHART
+// =========================
+// PIE CHART (PROFIT)
+// =========================
 new Chart(document.getElementById('pieChart'), {
   type: 'pie',
   data: {
@@ -113,6 +179,7 @@ new Chart(document.getElementById('pieChart'), {
     }]
   }
 });
+
 </script>
 
 {% endblock %}
