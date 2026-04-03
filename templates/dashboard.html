@@ -8,25 +8,31 @@ METRICS
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
 
   <div class="bg-white p-5 rounded-xl shadow">
-    <p class="text-gray-500 text-sm">Total Revenue</p>
-    <h2 class="text-2xl font-bold text-indigo-600">
+    <p class="text-gray-500 text-sm">Revenue</p>
+    <h2 class="text-2xl font-bold text-green-600">
       ₦{{ total_revenue|floatformat:2 }}
     </h2>
   </div>
 
   <div class="bg-white p-5 rounded-xl shadow">
-    <p class="text-gray-500 text-sm">Total Products</p>
-    <h2 class="text-2xl font-bold">{{ total_products }}</h2>
+    <p class="text-gray-500 text-sm">Cost</p>
+    <h2 class="text-2xl font-bold text-red-500">
+      ₦{{ total_cost|floatformat:2 }}
+    </h2>
   </div>
 
   <div class="bg-white p-5 rounded-xl shadow">
-    <p class="text-gray-500 text-sm">Low Stock</p>
-    <h2 class="text-2xl font-bold text-red-500">{{ low_stock }}</h2>
+    <p class="text-gray-500 text-sm">Profit</p>
+    <h2 class="text-2xl font-bold {% if profit >= 0 %}text-indigo-600{% else %}text-red-600{% endif %}">
+      ₦{{ profit|floatformat:2 }}
+    </h2>
   </div>
 
   <div class="bg-white p-5 rounded-xl shadow">
     <p class="text-gray-500 text-sm">Total Sales</p>
-    <h2 class="text-2xl font-bold text-green-600">{{ total_sales }}</h2>
+    <h2 class="text-2xl font-bold text-blue-600">
+      {{ total_sales }}
+    </h2>
   </div>
 
 </div>
@@ -34,16 +40,18 @@ METRICS
 <!-- =========================
 CHARTS
 ========================= -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
 
-  <div class="bg-white p-6 rounded-xl shadow">
-    <h3 class="font-semibold mb-4">Revenue Trend</h3>
+  <!-- Revenue Trend -->
+  <div class="bg-white p-6 rounded-xl shadow md:col-span-2">
+    <h3 class="font-semibold mb-4">Revenue Trend (30 days)</h3>
     <canvas id="revenueChart"></canvas>
   </div>
 
+  <!-- Profit Pie -->
   <div class="bg-white p-6 rounded-xl shadow">
-    <h3 class="font-semibold mb-4">Sales Volume</h3>
-    <canvas id="salesChart"></canvas>
+    <h3 class="font-semibold mb-4">Profit Analysis</h3>
+    <canvas id="pieChart"></canvas>
   </div>
 
 </div>
@@ -131,17 +139,22 @@ CHART JS
 
 <script>
 
-// DIRECT JSON FROM DJANGO (NO PARSE)
+// =========================
+// LINE CHART DATA
+// =========================
 const dates = {{ sales_dates|safe }};
 const revenueValues = {{ sales_values|safe }};
-const salesValues = {{ sales_count_values|safe }};
+const salesValues = {{ sales_count_values|safe };
 
-// Debug (optional)
-console.log("DATES:", dates);
-console.log("REVENUE:", revenueValues);
-console.log("SALES:", salesValues);
+// =========================
+// PIE DATA
+// =========================
+const pieLabels = {{ pie_labels|safe }};
+const pieValues = {{ pie_values|safe };
 
-// Revenue Chart
+// =========================
+// REVENUE LINE CHART
+// =========================
 new Chart(document.getElementById('revenueChart'), {
   type: 'line',
   data: {
@@ -149,21 +162,20 @@ new Chart(document.getElementById('revenueChart'), {
     datasets: [{
       label: 'Revenue',
       data: revenueValues,
-      borderWidth: 2,
       tension: 0.4
     }]
   }
 });
 
-// Sales Chart
-new Chart(document.getElementById('salesChart'), {
-  type: 'bar',
+// =========================
+// PIE CHART (PROFIT)
+// =========================
+new Chart(document.getElementById('pieChart'), {
+  type: 'pie',
   data: {
-    labels: dates,
+    labels: pieLabels,
     datasets: [{
-      label: 'Sales',
-      data: salesValues,
-      borderWidth: 1
+      data: pieValues
     }]
   }
 });
