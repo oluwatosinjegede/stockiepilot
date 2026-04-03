@@ -32,27 +32,11 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.05);
         }
 
-        .filters select {
-            padding: 8px;
-            border-radius: 6px;
-        }
+        .container { padding: 20px; }
 
-        .container {
-            padding: 20px;
-        }
-
-        .grid {
-            display: grid;
-            gap: 20px;
-        }
-
-        .grid-5 {
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        }
-
-        .grid-2 {
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        }
+        .grid { display: grid; gap: 20px; }
+        .grid-5 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
 
         .card {
             background: var(--card);
@@ -61,19 +45,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
-        .metric {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .metric small {
-            color: var(--muted);
-        }
-
-        .metric h2 {
-            margin: 5px 0 0;
-        }
-
+        .metric small { color: var(--muted); }
         .positive { color: var(--success); }
         .negative { color: var(--danger); }
 
@@ -83,46 +55,27 @@
             margin-bottom: 20px;
         }
 
-        .alert-item {
-            margin-bottom: 5px;
-        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .badge {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-        }
-
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; }
         .low { background: #fee2e2; color: #b91c1c; }
         .ok { background: #d1fae5; color: #065f46; }
 
-        canvas {
-            max-height: 280px;
-        }
+        canvas { max-height: 280px; }
     </style>
 </head>
+
 <body>
 
 <header>
     <h2>📊 Enterprise Dashboard</h2>
 
-    <div class="filters">
-        <select id="rangeFilter">
-            <option value="30">Last 30 Days</option>
-            <option value="7">Last 7 Days</option>
-            <option value="1">Today</option>
-        </select>
-    </div>
+    <select id="rangeFilter">
+        <option value="30">Last 30 Days</option>
+        <option value="7">Last 7 Days</option>
+        <option value="1">Today</option>
+    </select>
 </header>
 
 <div class="container">
@@ -131,39 +84,38 @@
 <div class="alerts" style="background:#fee2e2;">{{ error }}</div>
 {% endif %}
 
-<!-- ALERT ENGINE -->
 {% if alerts %}
 <div class="alerts" style="background:#fff3cd;">
     <strong>⚠ Smart Alerts</strong>
     {% for a in alerts %}
-        <div class="alert-item">{{ a }}</div>
+        <div>{{ a }}</div>
     {% endfor %}
 </div>
 {% endif %}
 
-<!-- KPI CARDS -->
+<!-- KPI -->
 <div class="grid grid-5">
 
     <div class="card metric">
         <small>Revenue</small>
-        <h2>₦{{ total_revenue }}</h2>
+        <h2>₦{{ total_revenue|floatformat:2 }}</h2>
     </div>
 
     <div class="card metric">
         <small>Cost</small>
-        <h2>₦{{ total_cost }}</h2>
+        <h2>₦{{ total_cost|floatformat:2 }}</h2>
     </div>
 
     <div class="card metric">
         <small>Profit</small>
         <h2 class="{% if profit < 0 %}negative{% else %}positive{% endif %}">
-            ₦{{ profit }}
+            ₦{{ profit|floatformat:2 }}
         </h2>
     </div>
 
     <div class="card metric">
-        <small>Inventory Value</small>
-        <h2>₦{{ inventory_value }}</h2>
+        <small>Inventory</small>
+        <h2>₦{{ inventory_value|floatformat:2 }}</h2>
     </div>
 
     <div class="card metric">
@@ -206,12 +158,12 @@
 
 <!-- TOP PRODUCTS -->
 <div class="card">
-    <h4>Top Performing Products</h4>
+    <h4>Top Products</h4>
 
     <table>
         <tr>
             <th>Product</th>
-            <th>Qty Sold</th>
+            <th>Qty</th>
             <th>Revenue</th>
             <th>Status</th>
         </tr>
@@ -220,7 +172,7 @@
         <tr>
             <td>{{ p.product__name }}</td>
             <td>{{ p.total_qty }}</td>
-            <td>₦{{ p.total_revenue }}</td>
+            <td>₦{{ p.total_revenue|floatformat:2 }}</td>
             <td>
                 <span class="badge {% if p.total_qty < 5 %}low{% else %}ok{% endif %}">
                     {% if p.total_qty < 5 %}Low{% else %}Good{% endif %}
@@ -234,6 +186,8 @@
 </div>
 
 <script>
+
+// SAFE PARSER
 function parse(data){
     try { return JSON.parse(data) } catch { return [] }
 }
@@ -253,18 +207,14 @@ const monthlyValues = parse('{{ monthly_values|escapejs }}')
 new Chart(document.getElementById('salesChart'), {
     type: 'line',
     data: {
-        labels: salesDates.concat(forecastDates),
+        labels: [...salesDates, ...forecastDates],
         datasets: [
-            {
-                label: 'Revenue',
-                data: salesValues,
-                borderWidth: 2
-            },
+            { label: 'Revenue', data: salesValues, tension: 0.4 },
             {
                 label: 'Forecast',
-                data: new Array(salesValues.length).fill(null).concat(forecastValues),
+                data: [...Array(salesValues.length).fill(null), ...forecastValues],
                 borderDash: [6,6],
-                borderWidth: 2
+                tension: 0.4
             }
         ]
     }
@@ -273,25 +223,13 @@ new Chart(document.getElementById('salesChart'), {
 // PROFIT
 new Chart(document.getElementById('profitChart'), {
     type: 'line',
-    data: {
-        labels: profitDates,
-        datasets: [{
-            label: 'Profit',
-            data: profitValues
-        }]
-    }
+    data: { labels: profitDates, datasets: [{ data: profitValues }] }
 })
 
 // MONTHLY
 new Chart(document.getElementById('monthlyChart'), {
     type: 'bar',
-    data: {
-        labels: monthlyLabels,
-        datasets: [{
-            label: 'Revenue',
-            data: monthlyValues
-        }]
-    }
+    data: { labels: monthlyLabels, datasets: [{ data: monthlyValues }] }
 })
 
 // PIE
@@ -301,19 +239,19 @@ new Chart(document.getElementById('pieChart'), {
         labels: ['Revenue','Cost','Profit'],
         datasets: [{
             data: [
-                {{ total_revenue }},
-                {{ total_cost }},
-                {{ profit }}
+                Number('{{ total_revenue }}'),
+                Number('{{ total_cost }}'),
+                Number('{{ profit }}')
             ]
         }]
     }
 })
 
-// FILTER (AJAX-ready)
+// FILTER
 document.getElementById("rangeFilter").addEventListener("change", function(){
-    const days = this.value
-    window.location.href = "?range=" + days
+    window.location.href = "?range=" + this.value
 })
+
 </script>
 
 </body>
