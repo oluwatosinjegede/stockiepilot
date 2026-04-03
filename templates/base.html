@@ -13,113 +13,116 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
     body { font-family: 'Inter', sans-serif; }
   </style>
 </head>
 
-<body class="h-full bg-gray-100 dark:bg-gray-900 transition duration-300">
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
 
 <div class="flex h-full">
 
   <!-- ================= SIDEBAR ================= -->
   <aside id="sidebar"
-         class="fixed lg:relative z-30 w-64 bg-gradient-to-b from-indigo-600 to-indigo-900 text-white flex flex-col shadow-xl transform lg:translate-x-0 -translate-x-full transition-transform duration-300">
+    class="fixed lg:relative z-30 w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0">
 
-    <div class="p-6 text-2xl font-bold tracking-wide">
-      🚀 StockiePilot
+    <!-- LOGO -->
+    <div class="px-6 py-5 text-xl font-semibold tracking-tight">
+      StockiePilot
     </div>
 
-    <nav class="flex-1 px-4 space-y-2">
+    <!-- NAV -->
+    <nav class="flex-1 px-4 space-y-1">
 
       <a href="{% url 'dashboard' %}"
-         class="block px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">
+        class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium
+        {% if request.resolver_match.url_name == 'dashboard' %}
+          bg-slate-100 dark:bg-slate-700
+        {% else %}
+          hover:bg-slate-100 dark:hover:bg-slate-700
+        {% endif %}">
         📊 Dashboard
       </a>
 
       <a href="{% url 'products' %}"
-         class="block px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'products' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">
+        class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
+        {% if request.resolver_match.url_name == 'products' %}
+          bg-slate-100 dark:bg-slate-700
+        {% else %}
+          hover:bg-slate-100 dark:hover:bg-slate-700
+        {% endif %}">
         📦 Products
       </a>
 
       <a href="{% url 'sales' %}"
-         class="block px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'sales' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">
+        class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
+        {% if request.resolver_match.url_name == 'sales' %}
+          bg-slate-100 dark:bg-slate-700
+        {% else %}
+          hover:bg-slate-100 dark:hover:bg-slate-700
+        {% endif %}">
         💰 Sales
       </a>
 
       <a href="{% url 'subscription' %}"
-         class="block px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'subscription' %}bg-white/20{% else %}hover:bg-white/10{% endif %}">
+        class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
+        {% if request.resolver_match.url_name == 'subscription' %}
+          bg-slate-100 dark:bg-slate-700
+        {% else %}
+          hover:bg-slate-100 dark:hover:bg-slate-700
+        {% endif %}">
         💳 Subscription
       </a>
 
     </nav>
 
-    <!-- USER INFO -->
-    <div class="p-4 border-t border-white/20 text-sm">
-      {% if request.user.is_authenticated %}
-        <div class="font-medium">{{ request.user.email }}</div>
-        <div class="text-xs opacity-70 mt-1">
-          Plan:
-          {{ request.user.company.subscription.plan.name|default:"Free" }}
-        </div>
-      {% else %}
-        <div>Guest</div>
-      {% endif %}
+    <!-- USER -->
+    <div class="p-4 border-t border-slate-200 dark:border-slate-700 text-xs">
+      <div class="font-medium">{{ request.user.email }}</div>
+      <div class="text-slate-500 mt-1">
+        {{ request.user.company.name|default:"" }}
+      </div>
     </div>
 
   </aside>
 
   <!-- ================= MAIN ================= -->
-  <div class="flex-1 flex flex-col w-full">
+  <div class="flex-1 flex flex-col">
 
-    <!-- ================= TOP BAR ================= -->
-    <header class="bg-white dark:bg-gray-800 shadow px-4 py-4 flex justify-between items-center">
+    <!-- TOPBAR -->
+    <header class="sticky top-0 z-20 bg-white/80 dark:bg-slate-800/80 backdrop-blur border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center">
 
-      <!-- LEFT -->
       <div class="flex items-center gap-3">
 
-        <!-- Mobile Menu Button -->
-        <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 dark:text-white">
+        <!-- Mobile toggle -->
+        <button onclick="toggleSidebar()" class="lg:hidden text-slate-600 dark:text-white">
           ☰
         </button>
 
-        <h1 class="text-lg font-semibold text-gray-800 dark:text-white">
+        <h1 class="text-lg font-semibold">
           {{ page_title|default:"Dashboard" }}
         </h1>
       </div>
 
-      <!-- RIGHT -->
       <div class="flex items-center gap-4">
 
-        <!-- Dark Mode -->
+        <!-- Dark mode -->
         <button onclick="toggleDarkMode()"
-                class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">
+          class="px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-sm">
           🌙
         </button>
 
-        <!-- Logout -->
-        {% if request.user.is_authenticated %}
-          <a href="{% url 'logout' %}" class="text-red-500 text-sm">
-            Logout
-          </a>
-        {% endif %}
+        <a href="{% url 'logout' %}" class="text-sm text-red-500">
+          Logout
+        </a>
 
       </div>
     </header>
 
-    <!-- ================= TOAST MESSAGES ================= -->
-    <div class="fixed top-5 right-5 z-50 space-y-2">
-      {% for message in messages %}
-        <div class="bg-green-500 text-white px-4 py-2 rounded shadow animate-fade-in">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-
-    <!-- ================= CONTENT ================= -->
-    <main class="flex-1 overflow-y-auto p-6">
+    <!-- CONTENT -->
+    <main class="flex-1 p-6">
       {% block content %}{% endblock %}
     </main>
 
@@ -127,27 +130,20 @@
 
 </div>
 
-<!-- ================= SCRIPTS ================= -->
 <script>
-/* Dark mode persistence */
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('-translate-x-full')
+}
+
 if (localStorage.getItem('theme') === 'dark') {
-  document.documentElement.classList.add('dark');
+  document.documentElement.classList.add('dark')
 }
 
-function toggleDarkMode() {
-  document.documentElement.classList.toggle('dark');
-
-  if (document.documentElement.classList.contains('dark')) {
-    localStorage.setItem('theme', 'dark');
-  } else {
-    localStorage.setItem('theme', 'light');
-  }
-}
-
-/* Sidebar toggle (mobile) */
-function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  sidebar.classList.toggle('-translate-x-full');
+function toggleDarkMode(){
+  document.documentElement.classList.toggle('dark')
+  localStorage.setItem('theme',
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  )
 }
 </script>
 

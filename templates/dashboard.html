@@ -1,91 +1,31 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Enterprise Dashboard</title>
+{% extends "base.html" %}
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block content %}
 
-    <style>
-        :root {
-            --bg: #f5f7fb;
-            --card: #ffffff;
-            --primary: #4f46e5;
-            --text: #111827;
-            --muted: #6b7280;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
+<div class="space-y-6">
 
-        body {
-            margin: 0;
-            font-family: "Segoe UI", Arial;
-            background: var(--bg);
-        }
+<!-- HEADER -->
+<div class="flex justify-between items-center">
+    <h2 class="text-xl font-semibold">📊 Enterprise Dashboard</h2>
 
-        header {
-            background: var(--card);
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        }
-
-        .container { padding: 20px; }
-
-        .grid { display: grid; gap: 20px; }
-        .grid-5 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
-
-        .card {
-            background: var(--card);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .metric small { color: var(--muted); }
-        .positive { color: var(--success); }
-        .negative { color: var(--danger); }
-
-        .alerts {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; border-bottom: 1px solid #eee; }
-
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; }
-        .low { background: #fee2e2; color: #b91c1c; }
-        .ok { background: #d1fae5; color: #065f46; }
-
-        canvas { max-height: 280px; }
-    </style>
-</head>
-
-<body>
-
-<header>
-    <h2>📊 Enterprise Dashboard</h2>
-
-    <select id="rangeFilter">
+    <select id="rangeFilter"
+        class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800">
         <option value="30">Last 30 Days</option>
         <option value="7">Last 7 Days</option>
         <option value="1">Today</option>
     </select>
-</header>
+</div>
 
-<div class="container">
-
+<!-- ERROR -->
 {% if error %}
-<div class="alerts" style="background:#fee2e2;">{{ error }}</div>
+<div class="bg-red-100 text-red-700 p-3 rounded-lg">
+    {{ error }}
+</div>
 {% endif %}
 
+<!-- ALERTS -->
 {% if alerts %}
-<div class="alerts" style="background:#fff3cd;">
+<div class="bg-yellow-100 text-yellow-800 p-3 rounded-lg">
     <strong>⚠ Smart Alerts</strong>
     {% for a in alerts %}
         <div>{{ a }}</div>
@@ -93,75 +33,71 @@
 </div>
 {% endif %}
 
-<!-- KPI -->
-<div class="grid grid-5">
+<!-- KPI CARDS -->
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
 
-    <div class="card metric">
-        <small>Revenue</small>
-        <h2>₦{{ total_revenue|floatformat:2 }}</h2>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <small class="text-slate-500">Revenue</small>
+        <h2 class="text-lg font-bold">₦{{ total_revenue|floatformat:2 }}</h2>
     </div>
 
-    <div class="card metric">
-        <small>Cost</small>
-        <h2>₦{{ total_cost|floatformat:2 }}</h2>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <small class="text-slate-500">Cost</small>
+        <h2 class="text-lg font-bold">₦{{ total_cost|floatformat:2 }}</h2>
     </div>
 
-    <div class="card metric">
-        <small>Profit</small>
-        <h2 class="{% if profit < 0 %}negative{% else %}positive{% endif %}">
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <small class="text-slate-500">Profit</small>
+        <h2 class="text-lg font-bold {% if profit < 0 %}text-red-500{% else %}text-green-500{% endif %}">
             ₦{{ profit|floatformat:2 }}
         </h2>
     </div>
 
-    <div class="card metric">
-        <small>Inventory</small>
-        <h2>₦{{ inventory_value|floatformat:2 }}</h2>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <small class="text-slate-500">Inventory</small>
+        <h2 class="text-lg font-bold">₦{{ inventory_value|floatformat:2 }}</h2>
     </div>
 
-    <div class="card metric">
-        <small>Growth</small>
-        <h2 class="{% if growth_rate < 0 %}negative{% else %}positive{% endif %}">
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <small class="text-slate-500">Growth</small>
+        <h2 class="text-lg font-bold {% if growth_rate < 0 %}text-red-500{% else %}text-green-500{% endif %}">
             {{ growth_rate|floatformat:2 }}%
         </h2>
     </div>
 
 </div>
 
-<br>
-
 <!-- CHARTS -->
-<div class="grid grid-2">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-    <div class="card">
-        <h4>Revenue + Forecast</h4>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <h4 class="mb-2 font-semibold">Revenue + Forecast</h4>
         <canvas id="salesChart"></canvas>
     </div>
 
-    <div class="card">
-        <h4>Profit Trend</h4>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <h4 class="mb-2 font-semibold">Profit Trend</h4>
         <canvas id="profitChart"></canvas>
     </div>
 
-    <div class="card">
-        <h4>Monthly Revenue</h4>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <h4 class="mb-2 font-semibold">Monthly Revenue</h4>
         <canvas id="monthlyChart"></canvas>
     </div>
 
-    <div class="card">
-        <h4>Financial Breakdown</h4>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <h4 class="mb-2 font-semibold">Breakdown</h4>
         <canvas id="pieChart"></canvas>
     </div>
 
 </div>
 
-<br>
-
 <!-- TOP PRODUCTS -->
-<div class="card">
-    <h4>Top Products</h4>
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+    <h4 class="font-semibold mb-3">Top Products</h4>
 
-    <table>
-        <tr>
+    <table class="w-full text-sm">
+        <tr class="text-left text-slate-500">
             <th>Product</th>
             <th>Qty</th>
             <th>Revenue</th>
@@ -169,15 +105,20 @@
         </tr>
 
         {% for p in top_products %}
-        <tr>
+        <tr class="border-t">
             <td>{{ p.product__name }}</td>
             <td>{{ p.total_qty }}</td>
             <td>₦{{ p.total_revenue|floatformat:2 }}</td>
             <td>
-                <span class="badge {% if p.total_qty < 5 %}low{% else %}ok{% endif %}">
+                <span class="px-2 py-1 rounded text-xs
+                    {% if p.total_qty < 5 %}bg-red-100 text-red-600{% else %}bg-green-100 text-green-600{% endif %}">
                     {% if p.total_qty < 5 %}Low{% else %}Good{% endif %}
                 </span>
             </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" class="text-center py-4 text-slate-400">No data</td>
         </tr>
         {% endfor %}
     </table>
@@ -185,9 +126,9 @@
 
 </div>
 
+<!-- JS -->
 <script>
 
-// SAFE PARSER
 function parse(data){
     try { return JSON.parse(data) } catch { return [] }
 }
@@ -203,18 +144,17 @@ const profitValues = parse('{{ profit_values|escapejs }}')
 const monthlyLabels = parse('{{ monthly_labels|escapejs }}')
 const monthlyValues = parse('{{ monthly_values|escapejs }}')
 
-// SALES + FORECAST
+// SALES
 new Chart(document.getElementById('salesChart'), {
     type: 'line',
     data: {
         labels: [...salesDates, ...forecastDates],
         datasets: [
-            { label: 'Revenue', data: salesValues, tension: 0.4 },
+            { label: 'Revenue', data: salesValues },
             {
                 label: 'Forecast',
                 data: [...Array(salesValues.length).fill(null), ...forecastValues],
-                borderDash: [6,6],
-                tension: 0.4
+                borderDash: [6,6]
             }
         ]
     }
@@ -239,9 +179,9 @@ new Chart(document.getElementById('pieChart'), {
         labels: ['Revenue','Cost','Profit'],
         datasets: [{
             data: [
-                Number('{{ total_revenue }}'),
-                Number('{{ total_cost }}'),
-                Number('{{ profit }}')
+                Number('{{ total_revenue|default:0 }}'),
+                Number('{{ total_cost|default:0 }}'),
+                Number('{{ profit|default:0 }}')
             ]
         }]
     }
@@ -254,5 +194,4 @@ document.getElementById("rangeFilter").addEventListener("change", function(){
 
 </script>
 
-</body>
-</html>
+{% endblock %}
