@@ -1,4 +1,4 @@
-# apps/dashboard/views.py
+# apps/dashboard/views_bad.py
 
 import json
 from django.shortcuts import render, redirect
@@ -26,10 +26,15 @@ def dashboard(request):
     ).select_related("product", "sale")
 
     # =========================
-    # COST CALCULATION (VALID)
+    # SAFE EXPRESSIONS
     # =========================
     cost_expr = ExpressionWrapper(
         F("quantity") * Coalesce(F("product__cost_price"), 0),
+        output_field=DecimalField(max_digits=12, decimal_places=2)
+    )
+
+    item_total_expr = ExpressionWrapper(
+        F("quantity") * Coalesce(F("price"), 0),
         output_field=DecimalField(max_digits=12, decimal_places=2)
     )
 
@@ -47,7 +52,7 @@ def dashboard(request):
     profit = total_revenue - total_cost
 
     # =========================
-    # DAILY TREND
+    # DAILY TREND (30 DAYS)
     # =========================
     revenue_qs = (
         sales_qs
@@ -76,10 +81,14 @@ def dashboard(request):
         created_at__lt=current_month
     ).aggregate(total=Coalesce(Sum("total_amount"), 0))["total"]
 
-    growth_rate = (
-        ((current_month_revenue - previous_month_revenue) / previous_month_revenue) * 100
-        if previous_month_revenue > 0 else 0
-    )
+    # Growth Rate
+    if previous_month_revenue > 0:
+        growth_rate = (
+            (current_month_revenue - previous_month_revenue)
+            / previous_month_revenue
+        ) * 100
+    else:
+        growth_rate = 0
 
     # =========================
     # MONTHLY TREND
@@ -96,23 +105,26 @@ def dashboard(request):
     monthly_values = [float(i["total"]) for i in monthly_trend]
 
     # =========================
-    # TOP PRODUCTS (FIXED)
+    # TOP PRODUCTS
     # =========================
     top_products = (
         sales_items_qs
         .values("product__id", "product__name")
         .annotate(
             total_qty=Coalesce(Sum("quantity"), 0),
-            total_revenue=Coalesce(Sum("total_price"), 0)  # ✅ FIXED
+            total_revenue=Coalesce(Sum(item_total_expr), 0)
         )
         .order_by("-total_qty")[:5]
     )
 
     # =========================
-    # RECENT SALES (FIXED)
+    # RECENT SALES
     # =========================
-    recent_sales = sales_items_qs.order_by("-sale__created_at")[:10]
-    # ✅ Use total_price directly (already computed in model)
+    recent_sales = (
+        sales_items_qs
+        .annotate(total_price_calc=item_total_expr)
+        .order_by("-sale__created_at")[:10]
+    )
 
     # =========================
     # METRICS
@@ -127,7 +139,7 @@ def dashboard(request):
     ).count()
 
     # =========================
-    # ALERTS
+    # ALERTS ENGINE
     # =========================
     alerts = []
 
