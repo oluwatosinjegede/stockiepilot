@@ -44,7 +44,7 @@
 <h3>Recent Sales</h3>
 {% for item in recent_sales %}
   <div>
-    {{ item.product.name }} - ₦{{ item.total_price_calc|floatformat:2 }}
+    {{ item.product.name }} - ₦{{ item.total_price|floatformat:2 }}
   </div>
 {% endfor %}
 
