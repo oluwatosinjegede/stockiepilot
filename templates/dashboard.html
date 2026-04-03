@@ -1,115 +1,320 @@
-{% extends "base.html" %}
-{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enterprise Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --primary: #4f46e5;
+            --text: #111827;
+            --muted: #6b7280;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial;
+            background: var(--bg);
+        }
+
+        header {
+            background: var(--card);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+
+        .filters select {
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .grid-5 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        }
+
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric small {
+            color: var(--muted);
+        }
+
+        .metric h2 {
+            margin: 5px 0 0;
+        }
+
+        .positive { color: var(--success); }
+        .negative { color: var(--danger); }
+
+        .alerts {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .alert-item {
+            margin-bottom: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .low { background: #fee2e2; color: #b91c1c; }
+        .ok { background: #d1fae5; color: #065f46; }
+
+        canvas {
+            max-height: 280px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>📊 Enterprise Dashboard</h2>
+
+    <div class="filters">
+        <select id="rangeFilter">
+            <option value="30">Last 30 Days</option>
+            <option value="7">Last 7 Days</option>
+            <option value="1">Today</option>
+        </select>
+    </div>
+</header>
+
+<div class="container">
 
 {% if error %}
-<div class="bg-red-100 text-red-700 p-4 rounded mb-4">
-  Error: {{ error }}
+<div class="alerts" style="background:#fee2e2;">{{ error }}</div>
+{% endif %}
+
+<!-- ALERT ENGINE -->
+{% if alerts %}
+<div class="alerts" style="background:#fff3cd;">
+    <strong>⚠ Smart Alerts</strong>
+    {% for a in alerts %}
+        <div class="alert-item">{{ a }}</div>
+    {% endfor %}
 </div>
 {% endif %}
 
-<!-- KPI -->
-<div class="grid md:grid-cols-6 gap-6 mb-6">
+<!-- KPI CARDS -->
+<div class="grid grid-5">
 
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p>Revenue</p>
-    <h2 class="text-green-600 font-bold">₦{{ total_revenue|floatformat:2 }}</h2>
-  </div>
+    <div class="card metric">
+        <small>Revenue</small>
+        <h2>₦{{ total_revenue }}</h2>
+    </div>
 
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p>Cost</p>
-    <h2 class="text-red-500 font-bold">₦{{ total_cost|floatformat:2 }}</h2>
-  </div>
+    <div class="card metric">
+        <small>Cost</small>
+        <h2>₦{{ total_cost }}</h2>
+    </div>
 
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p>Profit</p>
-    <h2 class="font-bold">₦{{ profit|floatformat:2 }}</h2>
-  </div>
+    <div class="card metric">
+        <small>Profit</small>
+        <h2 class="{% if profit < 0 %}negative{% else %}positive{% endif %}">
+            ₦{{ profit }}
+        </h2>
+    </div>
 
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p>Inventory</p>
-    <h2 class="text-purple-600 font-bold">₦{{ inventory_value|floatformat:2 }}</h2>
-  </div>
+    <div class="card metric">
+        <small>Inventory Value</small>
+        <h2>₦{{ inventory_value }}</h2>
+    </div>
 
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p>Growth</p>
-    <h2>{{ growth_rate|floatformat:2 }}%</h2>
-  </div>
-
-  <div class="bg-white p-5 rounded-xl shadow">
-    <p>Dead Stock</p>
-    <h2 class="text-red-600 font-bold">{{ dead_stock_count }}</h2>
-  </div>
+    <div class="card metric">
+        <small>Growth</small>
+        <h2 class="{% if growth_rate < 0 %}negative{% else %}positive{% endif %}">
+            {{ growth_rate|floatformat:2 }}%
+        </h2>
+    </div>
 
 </div>
 
-<!-- ALERTS -->
-<div class="bg-yellow-50 p-4 mb-6 rounded-xl">
-  {% for alert in alerts %}
-    <p>⚠ {{ alert }}</p>
-  {% empty %}
-    <p>No alerts</p>
-  {% endfor %}
-</div>
+<br>
 
 <!-- CHARTS -->
-<div class="grid md:grid-cols-2 gap-6 mb-6">
+<div class="grid grid-2">
 
-  <div class="bg-white p-6 rounded-xl shadow">
-    <h3>Revenue</h3>
-    <canvas id="revenueChart"></canvas>
-  </div>
+    <div class="card">
+        <h4>Revenue + Forecast</h4>
+        <canvas id="salesChart"></canvas>
+    </div>
 
-  <div class="bg-white p-6 rounded-xl shadow">
-    <h3>Profit</h3>
-    <canvas id="profitChart"></canvas>
-  </div>
+    <div class="card">
+        <h4>Profit Trend</h4>
+        <canvas id="profitChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h4>Monthly Revenue</h4>
+        <canvas id="monthlyChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h4>Financial Breakdown</h4>
+        <canvas id="pieChart"></canvas>
+    </div>
 
 </div>
 
-<div class="bg-white p-6 rounded-xl shadow mb-6">
-  <h3>Monthly</h3>
-  <canvas id="monthlyChart"></canvas>
+<br>
+
+<!-- TOP PRODUCTS -->
+<div class="card">
+    <h4>Top Performing Products</h4>
+
+    <table>
+        <tr>
+            <th>Product</th>
+            <th>Qty Sold</th>
+            <th>Revenue</th>
+            <th>Status</th>
+        </tr>
+
+        {% for p in top_products %}
+        <tr>
+            <td>{{ p.product__name }}</td>
+            <td>{{ p.total_qty }}</td>
+            <td>₦{{ p.total_revenue }}</td>
+            <td>
+                <span class="badge {% if p.total_qty < 5 %}low{% else %}ok{% endif %}">
+                    {% if p.total_qty < 5 %}Low{% else %}Good{% endif %}
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
 </div>
 
-<div class="bg-white p-6 rounded-xl shadow mb-6">
-  <h3>Profit Breakdown</h3>
-  <canvas id="pieChart"></canvas>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const dates = {{ sales_dates|safe }};
-const values = {{ sales_values|safe }};
+function parse(data){
+    try { return JSON.parse(data) } catch { return [] }
+}
 
-const profitDates = {{ profit_dates|safe }};
-const profitValues = {{ profit_values|safe }};
+const salesDates = parse('{{ sales_dates|escapejs }}')
+const salesValues = parse('{{ sales_values|escapejs }}')
+const forecastDates = parse('{{ forecast_dates|escapejs }}')
+const forecastValues = parse('{{ forecast_values|escapejs }}')
 
-const monthlyLabels = {{ monthly_labels|safe }};
-const monthlyValues = {{ monthly_values|safe }};
+const profitDates = parse('{{ profit_dates|escapejs }}')
+const profitValues = parse('{{ profit_values|escapejs }}')
 
-const pieLabels = {{ pie_labels|safe }};
-const pieValues = {{ pie_values|safe }};
+const monthlyLabels = parse('{{ monthly_labels|escapejs }}')
+const monthlyValues = parse('{{ monthly_values|escapejs }}')
 
-new Chart(document.getElementById('revenueChart'), {
-  type: 'line',
-  data: { labels: dates, datasets: [{ data: values }] }
-});
+// SALES + FORECAST
+new Chart(document.getElementById('salesChart'), {
+    type: 'line',
+    data: {
+        labels: salesDates.concat(forecastDates),
+        datasets: [
+            {
+                label: 'Revenue',
+                data: salesValues,
+                borderWidth: 2
+            },
+            {
+                label: 'Forecast',
+                data: new Array(salesValues.length).fill(null).concat(forecastValues),
+                borderDash: [6,6],
+                borderWidth: 2
+            }
+        ]
+    }
+})
 
+// PROFIT
 new Chart(document.getElementById('profitChart'), {
-  type: 'line',
-  data: { labels: profitDates, datasets: [{ data: profitValues }] }
-});
+    type: 'line',
+    data: {
+        labels: profitDates,
+        datasets: [{
+            label: 'Profit',
+            data: profitValues
+        }]
+    }
+})
 
+// MONTHLY
 new Chart(document.getElementById('monthlyChart'), {
-  type: 'bar',
-  data: { labels: monthlyLabels, datasets: [{ data: monthlyValues }] }
-});
+    type: 'bar',
+    data: {
+        labels: monthlyLabels,
+        datasets: [{
+            label: 'Revenue',
+            data: monthlyValues
+        }]
+    }
+})
 
+// PIE
 new Chart(document.getElementById('pieChart'), {
-  type: 'pie',
-  data: { labels: pieLabels, datasets: [{ data: pieValues }] }
-});
+    type: 'pie',
+    data: {
+        labels: ['Revenue','Cost','Profit'],
+        datasets: [{
+            data: [
+                {{ total_revenue }},
+                {{ total_cost }},
+                {{ profit }}
+            ]
+        }]
+    }
+})
+
+// FILTER (AJAX-ready)
+document.getElementById("rangeFilter").addEventListener("change", function(){
+    const days = this.value
+    window.location.href = "?range=" + days
+})
 </script>
 
-{% endblock %}
+</body>
+</html>

@@ -1,36 +1,46 @@
 # apps/dashboard/views.py
 
 import json
+import logging
+import numpy as np
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Value
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Value, Exists, OuterRef
 from django.db.models.functions import TruncDate, TruncMonth, Coalesce
 from django.utils.timezone import now, timedelta
 
 from apps.sales.models import Sale, SaleItem
 from apps.products.models import Product
 
+logger = logging.getLogger(__name__)
 
 DECIMAL_ZERO = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
 
 
 @login_required
 def dashboard(request):
+    company = getattr(request.user, "company", None)
+    if not company:
+        return redirect("login")
+
     try:
-        company = getattr(request.user, "company", None)
-        if not company:
-            return redirect("login")
+        # =========================
+        # DATE RANGE FILTER
+        # =========================
+        days = int(request.GET.get("range", 30))
+        date_from = now() - timedelta(days=days)
 
-        last_30_days = now() - timedelta(days=30)
-
+        # =========================
+        # BASE QUERYSETS
+        # =========================
         sales_qs = Sale.objects.filter(company=company)
-
         sales_items_qs = SaleItem.objects.filter(
             sale__company=company
         ).select_related("product", "sale")
 
         # =========================
-        # COST CALCULATION
+        # COST EXPRESSION
         # =========================
         cost_expr = ExpressionWrapper(
             F("quantity") * Coalesce(F("product__cost_price"), DECIMAL_ZERO),
@@ -55,7 +65,7 @@ def dashboard(request):
         # =========================
         revenue_qs = (
             sales_qs
-            .filter(created_at__gte=last_30_days)
+            .filter(created_at__gte=date_from)
             .annotate(date=TruncDate("created_at"))
             .values("date")
             .annotate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))
@@ -66,11 +76,33 @@ def dashboard(request):
         sales_values = [float(i["total"]) for i in revenue_qs]
 
         # =========================
-        # PROFIT TREND (NEW)
+        # AI FORECAST (LINEAR)
+        # =========================
+        forecast_days = 7
+        forecast_dates, forecast_values = [], []
+
+        if len(sales_values) >= 2:
+            y = np.array(sales_values)
+            x = np.arange(len(y))
+
+            m, c = np.polyfit(x, y, 1)
+
+            future_x = np.arange(len(y), len(y) + forecast_days)
+            forecast_values = [max(0, float(m * i + c)) for i in future_x]
+
+            last_date = revenue_qs.last()["date"] if revenue_qs.exists() else now().date()
+
+            forecast_dates = [
+                str(last_date + timedelta(days=i + 1))
+                for i in range(forecast_days)
+            ]
+
+        # =========================
+        # PROFIT TREND
         # =========================
         profit_qs = (
             sales_items_qs
-            .filter(sale__created_at__gte=last_30_days)
+            .filter(sale__created_at__gte=date_from)
             .annotate(date=TruncDate("sale__created_at"))
             .values("date")
             .annotate(
@@ -81,9 +113,7 @@ def dashboard(request):
         )
 
         profit_dates = [str(i["date"]) for i in profit_qs]
-        profit_values = [
-            float(i["revenue"] - i["cost"]) for i in profit_qs
-        ]
+        profit_values = [float(i["revenue"] - i["cost"]) for i in profit_qs]
 
         # =========================
         # MONTHLY TREND
@@ -114,16 +144,13 @@ def dashboard(request):
             created_at__lt=current_month
         ).aggregate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))["total"]
 
-        if previous_month_revenue > 0:
-            growth_rate = float(
-                (current_month_revenue - previous_month_revenue)
-                / previous_month_revenue * 100
-            )
-        else:
-            growth_rate = 0.0
+        growth_rate = (
+            float((current_month_revenue - previous_month_revenue) / previous_month_revenue * 100)
+            if previous_month_revenue > 0 else 0.0
+        )
 
         # =========================
-        # INVENTORY VALUE (NEW)
+        # INVENTORY VALUE
         # =========================
         inventory_value = Product.objects.filter(company=company).aggregate(
             total=Coalesce(
@@ -138,15 +165,28 @@ def dashboard(request):
         )["total"]
 
         # =========================
-        # DEAD STOCK (NEW)
+        # DEAD STOCK (OPTIMIZED)
         # =========================
-        sold_products = SaleItem.objects.filter(
+        sold_subquery = SaleItem.objects.filter(
+            product=OuterRef("pk"),
             sale__company=company
-        ).values_list("product_id", flat=True)
+        )
 
         dead_stock_count = Product.objects.filter(
             company=company
-        ).exclude(id__in=sold_products).count()
+        ).annotate(
+            has_sales=Exists(sold_subquery)
+        ).filter(
+            has_sales=False
+        ).count()
+
+        # =========================
+        # LOW STOCK
+        # =========================
+        low_stock = Product.objects.filter(
+            company=company,
+            quantity__lte=5
+        ).count()
 
         # =========================
         # TOP PRODUCTS
@@ -162,81 +202,60 @@ def dashboard(request):
         )
 
         # =========================
-        # RECENT SALES
-        # =========================
-        recent_sales = sales_items_qs.order_by("-sale__created_at")[:10]
-
-        # =========================
-        # METRICS
-        # =========================
-        total_sales = sales_qs.count()
-
-        low_stock = Product.objects.filter(
-            company=company,
-            quantity__lte=5
-        ).count()
-
-        # =========================
-        # ALERTS (SMART)
+        # ALERT ENGINE
         # =========================
         alerts = []
 
-        if low_stock > 0:
-            alerts.append(f"{low_stock} products are low on stock")
-
         if profit < 0:
-            alerts.append("You are running at a LOSS")
+            alerts.append("⚠️ Business is running at a LOSS")
 
-        if current_month_revenue < previous_month_revenue:
-            alerts.append("Revenue dropped compared to last month")
+        if growth_rate < 0:
+            alerts.append("📉 Revenue dropped vs last month")
 
         if dead_stock_count > 0:
-            alerts.append(f"{dead_stock_count} products have never been sold")
+            alerts.append(f"🧊 {dead_stock_count} dead stock products")
 
         if inventory_value > total_revenue:
-            alerts.append("Too much money tied in inventory")
+            alerts.append("💰 Too much capital tied in inventory")
 
-        if total_sales == 0:
-            alerts.append("No sales recorded yet")
+        if low_stock > 0:
+            alerts.append(f"📦 {low_stock} products low on stock")
+
+        if not sales_qs.exists():
+            alerts.append("🚫 No sales recorded yet")
 
         # =========================
-        # PIE CHART
+        # FINAL RESPONSE
         # =========================
-        pie_labels = ["Revenue", "Cost", "Profit"]
-        pie_values = [
-            float(total_revenue),
-            float(total_cost),
-            float(profit)
-        ]
-
-        return render(request, "dashboard.html", {
+        context = {
             "total_revenue": float(total_revenue),
             "total_cost": float(total_cost),
             "profit": float(profit),
             "inventory_value": float(inventory_value),
 
-            "growth_rate": float(growth_rate),
+            "growth_rate": growth_rate,
             "alerts": alerts,
 
-            "sales_dates": json.dumps(sales_dates),
-            "sales_values": json.dumps(sales_values),
+            "sales_dates": json.dumps(sales_dates or []),
+            "sales_values": json.dumps(sales_values or []),
 
-            "profit_dates": json.dumps(profit_dates),
-            "profit_values": json.dumps(profit_values),
+            "forecast_dates": json.dumps(forecast_dates),
+            "forecast_values": json.dumps(forecast_values),
 
-            "monthly_labels": json.dumps(monthly_labels),
-            "monthly_values": json.dumps(monthly_values),
+            "profit_dates": json.dumps(profit_dates or []),
+            "profit_values": json.dumps(profit_values or []),
 
-            "pie_labels": json.dumps(pie_labels),
-            "pie_values": json.dumps(pie_values),
+            "monthly_labels": json.dumps(monthly_labels or []),
+            "monthly_values": json.dumps(monthly_values or []),
 
             "dead_stock_count": dead_stock_count,
-
             "top_products": top_products,
-            "recent_sales": recent_sales,
-        })
+        }
+
+        return render(request, "dashboard.html", context)
 
     except Exception as e:
+        logger.exception("Dashboard Error")
         return render(request, "dashboard.html", {
-            "error": str(e)
+            "error": "Dashboard failed to load. Contact admin."
         })

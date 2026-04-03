@@ -7,40 +7,42 @@
 </div>
 {% endif %}
 
-<!-- ================= KPI ================= -->
-<div class="grid md:grid-cols-4 gap-6 mb-6">
+<!-- KPI -->
+<div class="grid md:grid-cols-6 gap-6 mb-6">
 
-  <div class="bg-white p-5 shadow rounded-xl">
-    <p class="text-sm text-gray-500">Revenue</p>
-    <h2 class="text-xl font-bold text-green-600">
-      ₦{{ total_revenue|floatformat:2 }}
-    </h2>
+  <div class="bg-white p-5 rounded-xl shadow">
+    <p>Revenue</p>
+    <h2 class="text-green-600 font-bold">₦{{ total_revenue|floatformat:2 }}</h2>
   </div>
 
-  <div class="bg-white p-5 shadow rounded-xl">
-    <p class="text-sm text-gray-500">Cost</p>
-    <h2 class="text-xl font-bold text-red-500">
-      ₦{{ total_cost|floatformat:2 }}
-    </h2>
+  <div class="bg-white p-5 rounded-xl shadow">
+    <p>Cost</p>
+    <h2 class="text-red-500 font-bold">₦{{ total_cost|floatformat:2 }}</h2>
   </div>
 
-  <div class="bg-white p-5 shadow rounded-xl">
-    <p class="text-sm text-gray-500">Profit</p>
-    <h2 class="text-xl font-bold {% if profit >= 0 %}text-indigo-600{% else %}text-red-600{% endif %}">
-      ₦{{ profit|floatformat:2 }}
-    </h2>
+  <div class="bg-white p-5 rounded-xl shadow">
+    <p>Profit</p>
+    <h2 class="font-bold">₦{{ profit|floatformat:2 }}</h2>
   </div>
 
-  <div class="bg-white p-5 shadow rounded-xl">
-    <p class="text-sm text-gray-500">Growth</p>
-    <h2 class="{% if growth_rate >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-      {{ growth_rate|floatformat:2 }}%
-    </h2>
+  <div class="bg-white p-5 rounded-xl shadow">
+    <p>Inventory</p>
+    <h2 class="text-purple-600 font-bold">₦{{ inventory_value|floatformat:2 }}</h2>
+  </div>
+
+  <div class="bg-white p-5 rounded-xl shadow">
+    <p>Growth</p>
+    <h2>{{ growth_rate|floatformat:2 }}%</h2>
+  </div>
+
+  <div class="bg-white p-5 rounded-xl shadow">
+    <p>Dead Stock</p>
+    <h2 class="text-red-600 font-bold">{{ dead_stock_count }}</h2>
   </div>
 
 </div>
 
-<!-- ================= ALERTS ================= -->
+<!-- ALERTS -->
 <div class="bg-yellow-50 p-4 mb-6 rounded-xl">
   {% for alert in alerts %}
     <p>⚠ {{ alert }}</p>
@@ -49,97 +51,64 @@
   {% endfor %}
 </div>
 
-<!-- ================= CHARTS ================= -->
-<div class="grid md:grid-cols-3 gap-6 mb-6">
+<!-- CHARTS -->
+<div class="grid md:grid-cols-2 gap-6 mb-6">
 
-  <div class="bg-white p-6 rounded-xl shadow md:col-span-2">
-    <h3 class="font-semibold mb-4">Daily Revenue</h3>
+  <div class="bg-white p-6 rounded-xl shadow">
+    <h3>Revenue</h3>
     <canvas id="revenueChart"></canvas>
   </div>
 
   <div class="bg-white p-6 rounded-xl shadow">
-    <h3 class="font-semibold mb-4">Profit Analysis</h3>
-    <canvas id="pieChart"></canvas>
+    <h3>Profit</h3>
+    <canvas id="profitChart"></canvas>
   </div>
 
 </div>
 
 <div class="bg-white p-6 rounded-xl shadow mb-6">
-  <h3 class="font-semibold mb-4">Monthly Revenue</h3>
+  <h3>Monthly</h3>
   <canvas id="monthlyChart"></canvas>
 </div>
 
-<!-- ================= TABLES ================= -->
-<div class="grid md:grid-cols-2 gap-6">
-
-  <!-- Top Products -->
-  <div class="bg-white p-6 rounded-xl shadow">
-    <h3 class="font-semibold mb-4">Top Products</h3>
-
-    {% for p in top_products %}
-      <div class="flex justify-between border-b py-2">
-        <span>{{ p.product__name }}</span>
-        <span>{{ p.total_qty }}</span>
-      </div>
-    {% empty %}
-      <p>No products</p>
-    {% endfor %}
-  </div>
-
-  <!-- Recent Sales -->
-  <div class="bg-white p-6 rounded-xl shadow">
-    <h3 class="font-semibold mb-4">Recent Sales</h3>
-
-    {% for item in recent_sales %}
-      <div class="flex justify-between border-b py-2">
-        <span>{{ item.product.name }}</span>
-        <span class="text-green-600">
-          ₦{{ item.total_price|floatformat:2 }}
-        </span>
-      </div>
-    {% empty %}
-      <p>No sales</p>
-    {% endfor %}
-  </div>
-
+<div class="bg-white p-6 rounded-xl shadow mb-6">
+  <h3>Profit Breakdown</h3>
+  <canvas id="pieChart"></canvas>
 </div>
 
-<!-- ================= CHART JS ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const dates = JSON.parse('{{ sales_dates|escapejs }}');
-const values = JSON.parse('{{ sales_values|escapejs }}');
-const monthlyLabels = JSON.parse('{{ monthly_labels|escapejs }}');
-const monthlyValues = JSON.parse('{{ monthly_values|escapejs }}');
-const pieLabels = JSON.parse('{{ pie_labels|escapejs }}');
-const pieValues = JSON.parse('{{ pie_values|escapejs }}');
+const dates = {{ sales_dates|safe }};
+const values = {{ sales_values|safe }};
 
-// Revenue
+const profitDates = {{ profit_dates|safe }};
+const profitValues = {{ profit_values|safe }};
+
+const monthlyLabels = {{ monthly_labels|safe }};
+const monthlyValues = {{ monthly_values|safe }};
+
+const pieLabels = {{ pie_labels|safe }};
+const pieValues = {{ pie_values|safe }};
+
 new Chart(document.getElementById('revenueChart'), {
   type: 'line',
-  data: {
-    labels: dates,
-    datasets: [{ data: values, tension: 0.4 }]
-  }
+  data: { labels: dates, datasets: [{ data: values }] }
 });
 
-// Monthly
+new Chart(document.getElementById('profitChart'), {
+  type: 'line',
+  data: { labels: profitDates, datasets: [{ data: profitValues }] }
+});
+
 new Chart(document.getElementById('monthlyChart'), {
   type: 'bar',
-  data: {
-    labels: monthlyLabels,
-    datasets: [{ data: monthlyValues }]
-  }
+  data: { labels: monthlyLabels, datasets: [{ data: monthlyValues }] }
 });
 
-// Pie
 new Chart(document.getElementById('pieChart'), {
   type: 'pie',
-  data: {
-    labels: pieLabels,
-    datasets: [{ data: pieValues }]
-  }
+  data: { labels: pieLabels, datasets: [{ data: pieValues }] }
 });
 </script>
 
