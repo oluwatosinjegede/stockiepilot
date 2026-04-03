@@ -3,12 +3,15 @@
 import json
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Value
 from django.db.models.functions import TruncDate, TruncMonth, Coalesce
 from django.utils.timezone import now, timedelta
 
 from apps.sales.models import Sale, SaleItem
 from apps.products.models import Product
+
+
+DECIMAL_ZERO = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
 
 
 @login_required
@@ -27,35 +30,35 @@ def dashboard(request):
         ).select_related("product", "sale")
 
         # =========================
-        # COST CALCULATION
+        # COST CALCULATION (FIXED)
         # =========================
         cost_expr = ExpressionWrapper(
-            F("quantity") * Coalesce(F("product__cost_price"), 0),
+            F("quantity") * Coalesce(F("product__cost_price"), DECIMAL_ZERO),
             output_field=DecimalField(max_digits=12, decimal_places=2)
         )
 
         # =========================
-        # TOTALS
+        # TOTALS (FIXED)
         # =========================
         total_revenue = sales_qs.aggregate(
-            total=Coalesce(Sum("total_amount"), 0)
-        )["total"] or 0
+            total=Coalesce(Sum("total_amount"), DECIMAL_ZERO)
+        )["total"]
 
         total_cost = sales_items_qs.aggregate(
-            total=Coalesce(Sum(cost_expr), 0)
-        )["total"] or 0
+            total=Coalesce(Sum(cost_expr), DECIMAL_ZERO)
+        )["total"]
 
         profit = total_revenue - total_cost
 
         # =========================
-        # DAILY TREND
+        # DAILY TREND (FIXED)
         # =========================
         revenue_qs = (
             sales_qs
             .filter(created_at__gte=last_30_days)
             .annotate(date=TruncDate("created_at"))
             .values("date")
-            .annotate(total=Coalesce(Sum("total_amount"), 0))
+            .annotate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))
             .order_by("date")
         )
 
@@ -63,19 +66,19 @@ def dashboard(request):
         sales_values = [float(i["total"]) for i in revenue_qs]
 
         # =========================
-        # MONTHLY COMPARISON
+        # MONTHLY COMPARISON (FIXED)
         # =========================
         current_month = now().replace(day=1)
         previous_month = (current_month - timedelta(days=1)).replace(day=1)
 
         current_month_revenue = sales_qs.filter(
             created_at__gte=current_month
-        ).aggregate(total=Coalesce(Sum("total_amount"), 0))["total"] or 0
+        ).aggregate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))["total"]
 
         previous_month_revenue = sales_qs.filter(
             created_at__gte=previous_month,
             created_at__lt=current_month
-        ).aggregate(total=Coalesce(Sum("total_amount"), 0))["total"] or 0
+        ).aggregate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))["total"]
 
         growth_rate = (
             ((current_month_revenue - previous_month_revenue) / previous_month_revenue) * 100
@@ -83,13 +86,13 @@ def dashboard(request):
         )
 
         # =========================
-        # MONTHLY TREND
+        # MONTHLY TREND (FIXED)
         # =========================
         monthly_trend = (
             sales_qs
             .annotate(month=TruncMonth("created_at"))
             .values("month")
-            .annotate(total=Coalesce(Sum("total_amount"), 0))
+            .annotate(total=Coalesce(Sum("total_amount"), DECIMAL_ZERO))
             .order_by("month")
         )
 
@@ -97,14 +100,14 @@ def dashboard(request):
         monthly_values = [float(i["total"]) for i in monthly_trend]
 
         # =========================
-        # TOP PRODUCTS
+        # TOP PRODUCTS (FIXED)
         # =========================
         top_products = (
             sales_items_qs
             .values("product__id", "product__name")
             .annotate(
-                total_qty=Coalesce(Sum("quantity"), 0),
-                total_revenue=Coalesce(Sum("total_price"), 0)
+                total_qty=Coalesce(Sum("quantity"), 0),  # int safe
+                total_revenue=Coalesce(Sum("total_price"), DECIMAL_ZERO)
             )
             .order_by("-total_qty")[:5]
         )
@@ -177,7 +180,6 @@ def dashboard(request):
         })
 
     except Exception as e:
-        # FAIL-SAFE (prevents 500 crash on Railway)
         return render(request, "dashboard.html", {
             "error": str(e)
         })
