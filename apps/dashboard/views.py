@@ -75,13 +75,12 @@ def dashboard(request):
         sales_values = [float(i["total"]) for i in revenue_qs]
 
         # =========================
-        # AI FORECAST (LINEAR)
+        # AI FORECAST (SAFE - NO NUMPY)
         # =========================
         forecast_days = 7
         forecast_dates, forecast_values = [], []
 
-        if len(sales_values) >= 2:
-            n = len(sales_values)
+        n = len(sales_values)
 
         if n >= 2:
             x = list(range(n))
@@ -93,16 +92,14 @@ def dashboard(request):
             numerator = sum((x[i] - x_mean) * (y[i] - y_mean) for i in range(n))
             denominator = sum((x[i] - x_mean) ** 2 for i in range(n))
 
+            # SAFE division
             m = numerator / denominator if denominator != 0 else 0
             c = y_mean - m * x_mean
 
             forecast_values = [
-                max(0, m * i + c)
+                max(0, float(m * i + c))
                 for i in range(n, n + forecast_days)
             ]
-
-            future_x = np.arange(len(y), len(y) + forecast_days)
-            forecast_values = [max(0, float(m * i + c)) for i in future_x]
 
             last_date = revenue_qs.last()["date"] if revenue_qs.exists() else now().date()
 
