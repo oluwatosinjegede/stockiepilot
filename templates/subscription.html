@@ -12,10 +12,18 @@
     </p>
   </div>
 
+  <!-- 🔒 ROLE NOTICE -->
+  {% if request.user.role != "staff" %}
+  <div class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 p-4 rounded-lg text-center">
+    Only staff users can manage subscription plans.
+  </div>
+  {% endif %}
+
   <!-- GRID -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-    <!-- FREE -->
+    <!-- PLAN CARD TEMPLATE -->
+    {% comment %} FREE {% endcomment %}
     <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
 
       <h3 class="text-lg font-semibold mb-1">Free</h3>
@@ -33,11 +41,17 @@
         <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">
           Current Plan
         </button>
-      {% else %}
+
+      {% elif request.user.role == "staff" %}
         <a href="{% url 'subscribe' 'free' %}"
            class="block text-center bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
           Choose Plan
         </a>
+
+      {% else %}
+        <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">
+          Not Allowed
+        </button>
       {% endif %}
 
     </div>
@@ -61,16 +75,22 @@
         <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">
           Current Plan
         </button>
-      {% else %}
+
+      {% elif request.user.role == "staff" %}
         <a href="{% url 'paystack_init' 'basic' %}"
            class="block text-center bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
           Upgrade
         </a>
+
+      {% else %}
+        <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">
+          Not Allowed
+        </button>
       {% endif %}
 
     </div>
 
-    <!-- PRO (HIGHLIGHTED) -->
+    <!-- PRO -->
     <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border-2 border-indigo-500 relative">
 
       <span class="absolute top-3 right-3 text-xs bg-indigo-600 text-white px-2 py-1 rounded-md">
@@ -93,11 +113,17 @@
         <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">
           Current Plan
         </button>
-      {% else %}
+
+      {% elif request.user.role == "staff" %}
         <a href="{% url 'paystack_init' 'pro' %}"
            class="block text-center bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
           Upgrade
         </a>
+
+      {% else %}
+        <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">
+          Not Allowed
+        </button>
       {% endif %}
 
     </div>
@@ -121,11 +147,17 @@
         <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">
           Current Plan
         </button>
-      {% else %}
+
+      {% elif request.user.role == "staff" %}
         <a href="{% url 'paystack_init' 'enterprise' %}"
            class="block text-center bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
           Upgrade
         </a>
+
+      {% else %}
+        <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">
+          Not Allowed
+        </button>
       {% endif %}
 
     </div>

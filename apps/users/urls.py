@@ -10,4 +10,6 @@ urlpatterns = [
     path('resend-verification/', views.resend_verification, name='resend_verification'),
 
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
+
+    path('create-user/', views.create_user_view, name='create_user'),
 ]

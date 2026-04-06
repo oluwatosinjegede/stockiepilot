@@ -10,7 +10,8 @@ from django.db.models.functions import Coalesce
 
 from .models import Product, Category
 
-# 🔥 SAFE fallback (NO circular import)
+
+# SAFE fallback (NO circular import)
 PLAN_LIMITS = {
     "free": 10,
     "basic": 50,
@@ -24,6 +25,12 @@ PLAN_LIMITS = {
 # =========================
 @login_required
 def products_view(request):
+
+    if request.user.role != "staff":
+        if request.method == "POST":
+            messages.error(request, "Only staff can manage products.")
+            return redirect("products")
+    
     company = getattr(request.user, "company", None)
 
     if not company:

@@ -57,7 +57,12 @@ class User(AbstractUser):
 
     is_email_verified = models.BooleanField(default=False)
 
-    role = models.CharField(max_length=50, default='owner')
+    ROLE_CHOICES = (
+        ("staff", "Staff"),
+        ("user", "User"),
+    )
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="staff")
 
     created_at = models.DateTimeField(default=timezone.now)
 

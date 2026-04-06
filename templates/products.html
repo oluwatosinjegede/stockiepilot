@@ -5,7 +5,8 @@
 
   <!-- SMART ALERTS -->
   {% if smart_alerts %}
-  <div class="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg">
+  <div class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 p-3 rounded-lg">
+    <strong>Smart Alerts</strong>
     {% for alert in smart_alerts %}
       <div>{{ alert }}</div>
     {% endfor %}
@@ -16,124 +17,160 @@
   <div class="flex justify-between items-center">
     <h2 class="text-xl font-semibold">Inventory Analytics</h2>
 
+    {% if request.user.role == "staff" %}
     <button onclick="openModal()"
-      class="bg-indigo-600 text-white px-4 py-2 rounded-lg">
+      class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
       + Add Product
     </button>
+    {% endif %}
   </div>
 
   <!-- KPIs -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border">
-      <p>Total Products</p>
-      <h3>{{ total_products }}</h3>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+      <p class="text-slate-500 text-sm">Total Products</p>
+      <h3 class="text-lg font-semibold">{{ total_products }}</h3>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border">
-      <p>Low Stock</p>
-      <h3 class="text-red-500">{{ low_stock_count }}</h3>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+      <p class="text-slate-500 text-sm">Low Stock</p>
+      <h3 class="text-red-500 font-semibold">{{ low_stock_count }}</h3>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border">
-      <p>Inventory Value</p>
-      <h3>₦{{ inventory_value|floatformat:2 }}</h3>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+      <p class="text-slate-500 text-sm">Inventory Value</p>
+      <h3 class="font-semibold">₦{{ inventory_value|floatformat:2 }}</h3>
     </div>
 
   </div>
 
   <!-- CHART -->
-  <script>
-
-  const ctx = document.getElementById('stockChart');
-
-  if (ctx) {
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: [
-          {% for p in products %}
-            "{{ p.name|escapejs }}",
-          {% endfor %}
-        ],
-        datasets: [{
-          data: [
-            {% for p in products %}
-              {{ p.quantity|default:0 }},
-            {% endfor %}
-          ]
-        }]
-      }
-    });
-  }
-
-  function openModal(){
-    document.getElementById("productModal").classList.remove("hidden")
-  }
-
-  </script>>
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+    <h4 class="font-semibold mb-2">Stock Distribution</h4>
+    <canvas id="stockChart"></canvas>
+  </div>
 
   <!-- TABLE -->
-  <table class="w-full text-sm">
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
 
-    {% for p in products %}
-    <tr class="border-t">
-      <td class="p-2">{{ p.name }}</td>
-      <td class="p-2">{{ p.quantity }}</td>
-    </tr>
-    {% empty %}
-    <tr>
-      <td class="p-4 text-center text-gray-400">No products</td>
-    </tr>
-    {% endfor %}
+    <table class="w-full text-sm">
 
-  </table>
+      <thead class="bg-slate-50 dark:bg-slate-700 text-slate-500">
+        <tr>
+          <th class="p-3 text-left">Product</th>
+          <th class="p-3 text-left">Stock</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for p in products %}
+        <tr class="border-t hover:bg-slate-50 dark:hover:bg-slate-700">
+
+          <td class="p-3 font-medium">{{ p.name }}</td>
+
+          <td class="p-3">
+            {% if p.quantity <= 5 %}
+              <span class="text-red-500 font-medium">
+                {{ p.quantity }} (Low)
+              </span>
+            {% else %}
+              {{ p.quantity }}
+            {% endif %}
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2" class="text-center p-6 text-slate-400">
+            No products available
+          </td>
+        </tr>
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
 
 </div>
 
 <!-- MODAL -->
-<div id="productModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
+{% if request.user.role == "staff" %}
+<div id="productModal"
+     class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
 
-  <div class="bg-white p-6 rounded-lg w-96">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl w-96 shadow-lg">
+
+    <h3 class="text-lg font-semibold mb-4">Add Product</h3>
 
     <form method="POST">
       {% csrf_token %}
 
-      <input name="name" placeholder="Name" class="w-full mb-2 border p-2">
-      <input name="price" placeholder="Price" type="number" class="w-full mb-2 border p-2">
-      <input name="quantity" placeholder="Qty" type="number" class="w-full mb-2 border p-2">
+      <input name="name" placeholder="Product Name"
+        class="w-full mb-2 border p-2 rounded dark:bg-slate-700">
 
-      <button class="bg-indigo-600 text-white px-4 py-2 rounded">
-        Save
-      </button>
+      <input name="price" type="number" step="0.01" placeholder="Price"
+        class="w-full mb-2 border p-2 rounded dark:bg-slate-700">
+
+      <input name="quantity" type="number" placeholder="Quantity"
+        class="w-full mb-4 border p-2 rounded dark:bg-slate-700">
+
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeModal()"
+          class="px-4 py-2 bg-slate-300 rounded">
+          Cancel
+        </button>
+
+        <button class="px-4 py-2 bg-indigo-600 text-white rounded">
+          Save
+        </button>
+      </div>
 
     </form>
 
   </div>
 
 </div>
+{% endif %}
 
+<!-- JS -->
 <script>
 
-// SAFE CHART
-const ctx = document.getElementById('stockChart');
+// SAFE CHART (ONLY ONCE)
+const chartEl = document.getElementById('stockChart');
 
-if (ctx) {
-  new Chart(ctx, {
+if (chartEl) {
+  new Chart(chartEl, {
     type: 'bar',
     data: {
       labels: [{% for p in products %}"{{ p.name|escapejs }}",{% endfor %}],
       datasets: [{
+        label: 'Stock',
         data: [{% for p in products %}{{ p.quantity }},{% endfor %}]
       }]
     }
   });
 }
 
-// MODAL
+// MODAL CONTROL
 function openModal(){
   document.getElementById("productModal").classList.remove("hidden")
 }
+
+function closeModal(){
+  document.getElementById("productModal").classList.add("hidden")
+}
+
+// CLICK OUTSIDE CLOSE
+window.addEventListener("click", function(e){
+  const modal = document.getElementById("productModal")
+  if (e.target === modal){
+    closeModal()
+  }
+})
 
 </script>
 

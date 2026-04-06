@@ -71,7 +71,9 @@ def register_view(request):
                 full_name=full_name,
                 phone=phone,
                 address=address,
-                is_active=False
+                is_active=False,
+                is_staff=True,          # IMPORTANT
+                role="staff"            # IMPORTANT
             )
 
             # =========================
@@ -228,3 +230,38 @@ def change_password(request):
         return redirect('dashboard')
 
     return render(request, "auth/change_password.html")
+
+
+@login_required
+def create_user_view(request):
+
+    if request.user.role != "staff":
+        messages.error(request, "Permission denied.")
+        return redirect("dashboard")
+
+    if request.method == "POST":
+
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        full_name = request.POST.get("full_name")
+
+        if not email or not password:
+            messages.error(request, "All fields required.")
+            return redirect("dashboard")
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "User already exists.")
+            return redirect("dashboard")
+
+        User.objects.create_user(
+            email=email,
+            username=email,
+            password=password,
+            company=request.user.company,
+            full_name=full_name,
+            role="user",       # 🔥 ORDINARY USER
+            is_staff=False
+        )
+
+        messages.success(request, "User created successfully.")
+        return redirect("dashboard")

@@ -94,6 +94,9 @@ def sales_view(request):
         .order_by("-sale__created_at")
     )
 
+    if request.user.role not in ["staff", "user"]:
+        return redirect("dashboard")
+
     return render(request, "sales.html", {
         "sales": sales
     })

@@ -28,6 +28,11 @@ def validate_plan(plan):
 
 @login_required
 def subscription_view(request):
+
+    if request.user.role != "staff":
+        messages.error(request, "Only staff can manage subscription.")
+        return redirect("dashboard")
+    
     company = get_user_company(request.user)
 
     if not company:
