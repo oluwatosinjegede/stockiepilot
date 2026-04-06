@@ -31,8 +31,9 @@ def products_view(request):
     # ================= CREATE =================
     if request.method == "POST":
 
-        if request.user.role != "owner":
-            messages.error(request, "Only admins can manage products.")
+        # Allow both owner and staff
+        if request.user.role not in ["owner", "staff"]:
+            messages.error(request, "Permission denied.")
             return redirect("products")
 
         #  SAFE SUBSCRIPTION
@@ -155,3 +156,51 @@ def get_product_price(request, product_id):
         "price": float(product.selling_price or 0),
         "stock": product.quantity or 0
     })
+
+
+@login_required
+def edit_product(request, product_id):
+
+    company = getattr(request.user, "company", None)
+
+    product = get_object_or_404(Product, id=product_id, company=company)
+
+    if request.method == "POST":
+
+        name = request.POST.get("name", "").strip()
+        price = request.POST.get("price")
+        quantity = request.POST.get("quantity")
+        cost_price = request.POST.get("cost_price")
+
+        try:
+            product.name = name
+            product.selling_price = Decimal(price)
+            product.quantity = int(quantity)
+            product.cost_price = Decimal(cost_price) if cost_price else product.selling_price
+
+            product.save()
+
+            messages.success(request, "Product updated successfully.")
+
+        except:
+            messages.error(request, "Invalid data.")
+
+        return redirect("products")
+
+    return render(request, "products/edit.html", {
+        "product": product
+    })
+
+
+@login_required
+def delete_product(request, product_id):
+
+    company = getattr(request.user, "company", None)
+
+    product = get_object_or_404(Product, id=product_id, company=company)
+
+    product.delete()
+
+    messages.success(request, "Product deleted.")
+
+    return redirect("products")

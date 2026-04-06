@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow">
+
+  <h2 class="text-xl font-bold mb-4">Edit Product</h2>
+
+  <form method="POST">
+    {% csrf_token %}
+
+    <input name="name" value="{{ product.name }}"
+           class="w-full p-2 border mb-3">
+
+    <input name="price" value="{{ product.selling_price }}"
+           class="w-full p-2 border mb-3">
+
+    <input name="quantity" value="{{ product.quantity }}"
+           class="w-full p-2 border mb-3">
+
+    <input name="cost_price" value="{{ product.cost_price }}"
+           class="w-full p-2 border mb-3">
+
+    <button class="bg-indigo-600 text-white px-4 py-2 rounded">
+      Update
+    </button>
+
+  </form>
+
+</div>
+
+{% endblock %}
