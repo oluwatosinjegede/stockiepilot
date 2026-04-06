@@ -1,10 +1,12 @@
 from decimal import Decimal, InvalidOperation
+import uuid
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
+from django.db import IntegrityError
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper, Value
 from django.db.models.functions import Coalesce
 
@@ -31,28 +33,28 @@ def products_view(request):
     # ================= CREATE =================
     if request.method == "POST":
 
-        # RBAC: Only staff can create products
+        # 🔒 RBAC
         if request.user.role != "staff":
             messages.error(request, "Only staff can manage products.")
             return redirect("products")
 
-        # PLAN LIMIT CHECK
-        limit = PLAN_LIMITS.get(company.subscription_plan)
+        # PLAN LIMIT
+        plan = getattr(company, "subscription_plan", "free")
+        limit = PLAN_LIMITS.get(plan, 10)
 
         if limit is not None:
-            current_count = Product.objects.filter(company=company).count()
-            if current_count >= limit:
+            if Product.objects.filter(company=company).count() >= limit:
                 messages.error(request, "Upgrade your plan.")
                 return redirect("subscription")
 
-        # GET FORM DATA
+        # FORM DATA
         name = request.POST.get("name", "").strip()
         price = request.POST.get("price")
         quantity = request.POST.get("quantity")
         category_id = request.POST.get("category")
         description = request.POST.get("description", "")
         cost_price = request.POST.get("cost_price")
-        sku = request.POST.get("sku")
+        sku_input = request.POST.get("sku")
 
         # VALIDATION
         if not name or not price or not quantity:
@@ -62,7 +64,6 @@ def products_view(request):
         try:
             price = Decimal(price)
             quantity = int(quantity)
-
             cost_price = Decimal(cost_price) if cost_price else price
 
             if price <= 0 or quantity < 0 or cost_price < 0:
@@ -72,27 +73,41 @@ def products_view(request):
             messages.error(request, "Invalid numeric values.")
             return redirect("products")
 
-        # CATEGORY
+        # CATEGORY SAFE FETCH
         category = None
         if category_id:
             category = Category.objects.filter(id=category_id).first()
 
-        # DUPLICATE CHECK
+        # DUPLICATE NAME CHECK (PER COMPANY)
         if Product.objects.filter(company=company, name__iexact=name).exists():
             messages.error(request, "Product already exists.")
             return redirect("products")
 
-        # CREATE PRODUCT
-        Product.objects.create(
-            company=company,
-            name=name,
-            category=category,
-            description=description,
-            selling_price=price,
-            cost_price=cost_price,
-            quantity=quantity,
-            sku=sku or f"SKU-{company.id}-{name[:5].upper()}"
-        )
+        # ================= SAFE SKU =================
+        if sku_input:
+            sku = sku_input.strip()
+        else:
+            sku = f"SKU-{company.id}-{uuid.uuid4().hex[:8].upper()}"
+
+        # ENSURE SKU UNIQUE
+        while Product.objects.filter(sku=sku).exists():
+            sku = f"SKU-{company.id}-{uuid.uuid4().hex[:8].upper()}"
+
+        # ================= CREATE =================
+        try:
+            Product.objects.create(
+                company=company,
+                name=name,
+                category=category,
+                description=description,
+                selling_price=price,
+                cost_price=cost_price,
+                quantity=quantity,
+                sku=sku
+            )
+        except IntegrityError:
+            messages.error(request, "SKU conflict. Try again.")
+            return redirect("products")
 
         messages.success(request, "Product created successfully.")
         return redirect("products")
@@ -123,10 +138,10 @@ def products_view(request):
     )["total"] or 0
 
     # ================= SMART ALERTS =================
-    smart_alerts = []
-    for p in products:
-        if p.quantity <= 5:
-            smart_alerts.append(f"{p.name} is low in stock")
+    smart_alerts = [
+        f"{p.name} is low in stock"
+        for p in products if p.quantity <= 5
+    ]
 
     return render(request, "products.html", {
         "products": products,
