@@ -18,7 +18,7 @@
     <h2 class="text-xl font-semibold">Inventory Analytics</h2>
 
     <!--  FIXED ROLE -->
-    {% if request.user.role == "owner", "staff" %}
+    {% if request.user.role == "owner" or request.user.role == "staff" %}
     <button onclick="openModal()"
       class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
       + Add Product
@@ -102,7 +102,7 @@
 </div>
 
 <!-- MODAL -->
-{% if request.user.role == "owner", "staff" %}
+{% if request.user.role == "owner" or request.user.role == "staff" %}
 <div id="productModal"
      class="hidden fixed inset-0 bg-black/50 items-center justify-center z-50">
 
