@@ -102,7 +102,7 @@
 </div>
 
 <!-- MODAL -->
-{% if request.user.role == "owner" %}
+{% if request.user.role == "owner", "staff" %}
 <div id="productModal"
      class="hidden fixed inset-0 bg-black/50 items-center justify-center z-50">
 
