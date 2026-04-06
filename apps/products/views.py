@@ -11,7 +11,6 @@ from django.db.models.functions import Coalesce
 from .models import Product, Category
 
 
-# SAFE fallback (NO circular import)
 PLAN_LIMITS = {
     "free": 10,
     "basic": 50,
@@ -20,17 +19,9 @@ PLAN_LIMITS = {
 }
 
 
-# =========================
-# PRODUCTS VIEW (SAFE)
-# =========================
 @login_required
 def products_view(request):
 
-    if request.user.role != "staff":
-        if request.method == "POST":
-            messages.error(request, "Only staff can manage products.")
-            return redirect("products")
-    
     company = getattr(request.user, "company", None)
 
     if not company:
@@ -40,50 +31,70 @@ def products_view(request):
     # ================= CREATE =================
     if request.method == "POST":
 
+        # RBAC: Only staff can create products
+        if request.user.role != "staff":
+            messages.error(request, "Only staff can manage products.")
+            return redirect("products")
+
+        # PLAN LIMIT CHECK
         limit = PLAN_LIMITS.get(company.subscription_plan)
 
         if limit is not None:
-            if Product.objects.filter(company=company).count() >= limit:
+            current_count = Product.objects.filter(company=company).count()
+            if current_count >= limit:
                 messages.error(request, "Upgrade your plan.")
                 return redirect("subscription")
 
+        # GET FORM DATA
         name = request.POST.get("name", "").strip()
         price = request.POST.get("price")
         quantity = request.POST.get("quantity")
         category_id = request.POST.get("category")
+        description = request.POST.get("description", "")
+        cost_price = request.POST.get("cost_price")
+        sku = request.POST.get("sku")
 
+        # VALIDATION
         if not name or not price or not quantity:
-            messages.error(request, "All fields required.")
+            messages.error(request, "Name, price and quantity are required.")
             return redirect("products")
 
         try:
             price = Decimal(price)
             quantity = int(quantity)
 
-            if price <= 0 or quantity < 0:
+            cost_price = Decimal(cost_price) if cost_price else price
+
+            if price <= 0 or quantity < 0 or cost_price < 0:
                 raise ValueError
 
-        except Exception:
-            messages.error(request, "Invalid input.")
+        except (InvalidOperation, ValueError):
+            messages.error(request, "Invalid numeric values.")
             return redirect("products")
 
-        category = Category.objects.filter(id=category_id).first() if category_id else None
+        # CATEGORY
+        category = None
+        if category_id:
+            category = Category.objects.filter(id=category_id).first()
 
+        # DUPLICATE CHECK
         if Product.objects.filter(company=company, name__iexact=name).exists():
             messages.error(request, "Product already exists.")
             return redirect("products")
 
+        # CREATE PRODUCT
         Product.objects.create(
             company=company,
             name=name,
             category=category,
+            description=description,
             selling_price=price,
-            cost_price=price or Decimal("0.00"),
+            cost_price=cost_price,
             quantity=quantity,
-            sku=f"SKU-{company.id}-{name[:5].upper()}"
+            sku=sku or f"SKU-{company.id}-{name[:5].upper()}"
         )
 
-        messages.success(request, "Product created.")
+        messages.success(request, "Product created successfully.")
         return redirect("products")
 
     # ================= FETCH =================
@@ -96,25 +107,22 @@ def products_view(request):
 
     categories = Category.objects.all()
 
-    # ================= SAFE ANALYTICS =================
+    # ================= ANALYTICS =================
     low_stock_count = products.filter(quantity__lte=5).count()
 
-    try:
-        inventory_value = products.aggregate(
-            total=Coalesce(
-                Sum(
-                    ExpressionWrapper(
-                        F("quantity") * Coalesce(F("cost_price"), Value(0)),
-                        output_field=DecimalField(max_digits=12, decimal_places=2)
-                    )
-                ),
-                Value(0)
-            )
-        )["total"] or 0
-    except Exception:
-        inventory_value = 0
+    inventory_value = products.aggregate(
+        total=Coalesce(
+            Sum(
+                ExpressionWrapper(
+                    F("quantity") * Coalesce(F("cost_price"), Value(0)),
+                    output_field=DecimalField(max_digits=12, decimal_places=2)
+                )
+            ),
+            Value(0)
+        )
+    )["total"] or 0
 
-    # 🔥 SAFE ALERTS (NO CRASH)
+    # ================= SMART ALERTS =================
     smart_alerts = []
     for p in products:
         if p.quantity <= 5:
@@ -130,9 +138,7 @@ def products_view(request):
     })
 
 
-# =========================
-# AJAX
-# =========================
+# ================= AJAX =================
 @login_required
 def get_product_price(request, product_id):
     company = getattr(request.user, "company", None)
