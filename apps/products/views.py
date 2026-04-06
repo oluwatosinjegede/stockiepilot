@@ -33,21 +33,27 @@ def products_view(request):
     # ================= CREATE =================
     if request.method == "POST":
 
-        # 🔒 RBAC
-        if request.user.role != "staff":
-            messages.error(request, "Only staff can manage products.")
+        #  FIXED RBAC (ONLY OWNER)
+        if request.user.role != "owner":
+            messages.error(request, "Only admins can manage products.")
             return redirect("products")
 
-        # PLAN LIMIT
-        plan = getattr(company, "subscription_plan", "free")
-        limit = PLAN_LIMITS.get(plan, 10)
+        #  FIXED PLAN ACCESS
+        plan_name = getattr(
+            getattr(company, "subscription", None),
+            "plan",
+            None
+        )
+
+        plan_name = getattr(plan_name, "name", "free").lower()
+        limit = PLAN_LIMITS.get(plan_name, 10)
 
         if limit is not None:
             if Product.objects.filter(company=company).count() >= limit:
-                messages.error(request, "Upgrade your plan.")
+                messages.error(request, "Plan limit reached. Upgrade required.")
                 return redirect("subscription")
 
-        # FORM DATA
+        # ================= FORM =================
         name = request.POST.get("name", "").strip()
         price = request.POST.get("price")
         quantity = request.POST.get("quantity")
@@ -56,7 +62,7 @@ def products_view(request):
         cost_price = request.POST.get("cost_price")
         sku_input = request.POST.get("sku")
 
-        # VALIDATION
+        # ================= VALIDATION =================
         if not name or not price or not quantity:
             messages.error(request, "Name, price and quantity are required.")
             return redirect("products")
@@ -73,24 +79,22 @@ def products_view(request):
             messages.error(request, "Invalid numeric values.")
             return redirect("products")
 
-        # CATEGORY SAFE FETCH
-        category = None
-        if category_id:
-            category = Category.objects.filter(id=category_id).first()
+        # ================= CATEGORY =================
+        category = Category.objects.filter(id=category_id).first() if category_id else None
 
-        # DUPLICATE NAME CHECK (PER COMPANY)
+        # ================= DUPLICATE CHECK =================
         if Product.objects.filter(company=company, name__iexact=name).exists():
             messages.error(request, "Product already exists.")
             return redirect("products")
 
-        # ================= SAFE SKU =================
+        # ================= SKU =================
         if sku_input:
             sku = sku_input.strip()
         else:
             sku = f"SKU-{company.id}-{uuid.uuid4().hex[:8].upper()}"
 
-        # ENSURE SKU UNIQUE
-        while Product.objects.filter(sku=sku).exists():
+        #  FIXED: COMPANY SCOPED SKU
+        while Product.objects.filter(company=company, sku=sku).exists():
             sku = f"SKU-{company.id}-{uuid.uuid4().hex[:8].upper()}"
 
         # ================= CREATE =================
@@ -137,7 +141,7 @@ def products_view(request):
         )
     )["total"] or 0
 
-    # ================= SMART ALERTS =================
+    # ================= ALERTS =================
     smart_alerts = [
         f"{p.name} is low in stock"
         for p in products if p.quantity <= 5
@@ -156,6 +160,7 @@ def products_view(request):
 # ================= AJAX =================
 @login_required
 def get_product_price(request, product_id):
+
     company = getattr(request.user, "company", None)
 
     if not company:
