@@ -19,10 +19,16 @@
 
     <!--  FIXED ROLE -->
     {% if request.user.role == "owner" or request.user.role == "staff" %}
-    <button onclick="openModal()"
-      class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
-      + Add Product
-    </button>
+    <div class="flex gap-2">
+      <button onclick="openCategoryModal()"
+        class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition">
+        + Add Category
+      </button>
+      <button onclick="openModal()"
+        class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+        + Add Product
+      </button>
+    </div>
     {% endif %}
   </div>
 
@@ -65,6 +71,7 @@
       <thead class="bg-slate-50 dark:bg-slate-700 text-slate-500">
         <tr>
           <th class="p-3 text-left">Product</th>
+          <th class="p-3 text-left">Category</th>
           <th class="p-3 text-left">Stock</th>
         </tr>
       </thead>
@@ -74,6 +81,7 @@
         {% for p in products %}
         <tr class="border-t hover:bg-slate-50 dark:hover:bg-slate-700">
           <td class="p-3 font-medium">{{ p.name }}</td>
+          <td class="p-3">{{ p.category.name|default:"Uncategorized" }}</td>
 
           <td class="p-3">
             {% if p.quantity <= 5 %}
@@ -87,7 +95,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="2" class="text-center p-6 text-slate-400">
+          <td colspan="3" class="text-center p-6 text-slate-400">
             No products available
           </td>
         </tr>
@@ -112,6 +120,7 @@
 
     <form method="POST" class="space-y-4">
       {% csrf_token %}
+      <input type="hidden" name="action" value="create_product">
 
       <input name="name" required placeholder="Product Name"
         class="w-full p-2 border rounded-lg dark:bg-slate-700">
@@ -167,7 +176,38 @@
 </div>
 {% endif %}
 
-<!-- ✅ LOAD CHART SAFELY -->
+{% if request.user.role == "owner" or request.user.role == "staff" %}
+<div id="categoryModal"
+     class="hidden fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl w-full max-w-lg shadow-lg">
+    <h3 class="text-lg font-semibold mb-4">Add Category</h3>
+    <form method="POST" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_category">
+
+      <input name="category_name" required placeholder="Category Name"
+        class="w-full p-2 border rounded-lg dark:bg-slate-700">
+
+      <textarea name="category_description" rows="3"
+        placeholder="Description (optional)"
+        class="w-full p-2 border rounded-lg dark:bg-slate-700"></textarea>
+
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeCategoryModal()"
+          class="px-4 py-2 bg-slate-300 rounded-lg">
+          Cancel
+        </button>
+        <button type="submit"
+          class="px-4 py-2 bg-emerald-600 text-white rounded-lg">
+          Save Category
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<!-- LOAD CHART SAFELY -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -208,6 +248,19 @@ function closeModal(){
   modal.classList.add("hidden")
   modal.classList.remove("flex")
 }
+
+function openCategoryModal(){
+  const modal = document.getElementById("categoryModal")
+  modal.classList.remove("hidden")
+  modal.classList.add("flex")
+}
+
+function closeCategoryModal(){
+  const modal = document.getElementById("categoryModal")
+  modal.classList.add("hidden")
+  modal.classList.remove("flex")
+}
 </script>
+
 
 {% endblock %}
