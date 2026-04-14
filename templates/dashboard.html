@@ -6,137 +6,147 @@
 
 <!-- HEADER -->
 <div class="flex justify-between items-center">
-    <h2 class="text-xl font-semibold">📊 Enterprise Dashboard</h2>
+    <div class="rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-500 text-white p-6 shadow-lg">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <p class="text-sm/6 text-blue-100">AI Analytics Workspace</p>
+        <h2 class="text-2xl font-semibold">Predictive Business Command Center</h2>
+        <p class="text-blue-100 text-sm mt-1">Monitor performance, detect risk and act on AI-generated predictions.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <label for="rangeFilter" class="text-sm font-medium">Time range</label>
+        <select id="rangeFilter" class="text-slate-800 px-3 py-2 rounded-lg border border-white/40 bg-white/95">
+          <option value="90" {% if selected_range == 90 %}selected{% endif %}>Last 90 Days</option>
+          <option value="30" {% if selected_range == 30 %}selected{% endif %}>Last 30 Days</option>
+          <option value="7" {% if selected_range == 7 %}selected{% endif %}>Last 7 Days</option>
+          <option value="1" {% if selected_range == 1 %}selected{% endif %}>Today</option>
+        </select>
+      </div>
+    </div>
+  </div>
 
-    <select id="rangeFilter"
-        class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800">
-        <option value="30">Last 30 Days</option>
-        <option value="7">Last 7 Days</option>
-        <option value="1">Today</option>
-    </select>
-</div>
-
-<!-- ERROR -->
-{% if error %}
-<div class="bg-red-100 text-red-700 p-3 rounded-lg">
-    {{ error }}
-</div>
-{% endif %}
-
-<!-- ALERTS -->
-{% if alerts %}
-<div class="bg-yellow-100 text-yellow-800 p-3 rounded-lg">
-    <strong>⚠ Smart Alerts</strong>
-    {% for a in alerts %}
-        <div>{{ a }}</div>
-    {% endfor %}
-</div>
-{% endif %}
-
-<!-- KPI CARDS -->
-<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <small class="text-slate-500">Revenue</small>
-        <h2 class="text-lg font-bold">₦{{ total_revenue|floatformat:2 }}</h2>
+  {% if error %}
+  <div class="bg-red-100 text-red-700 p-3 rounded-lg">{{ error }}</div>
+  {% endif %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      <p class="text-xs uppercase tracking-wide text-slate-500">Revenue</p>
+      <h3 class="text-xl font-bold mt-1">₦{{ total_revenue|floatformat:2 }}</h3>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <small class="text-slate-500">Cost</small>
-        <h2 class="text-lg font-bold">₦{{ total_cost|floatformat:2 }}</h2>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      <p class="text-xs uppercase tracking-wide text-slate-500">Cost</p>
+      <h3 class="text-xl font-bold mt-1">₦{{ total_cost|floatformat:2 }}</h3>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <small class="text-slate-500">Profit</small>
-        <h2 class="text-lg font-bold {% if profit < 0 %}text-red-500{% else %}text-green-500{% endif %}">
-            ₦{{ profit|floatformat:2 }}
-        </h2>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      <p class="text-xs uppercase tracking-wide text-slate-500">Profit</p>
+      <h3 class="text-xl font-bold mt-1 {% if profit < 0 %}text-red-500{% else %}text-emerald-500{% endif %}">₦{{ profit|floatformat:2 }}</h3>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <small class="text-slate-500">Inventory</small>
-        <h2 class="text-lg font-bold">₦{{ inventory_value|floatformat:2 }}</h2>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      <p class="text-xs uppercase tracking-wide text-slate-500">Inventory Value</p>
+      <h3 class="text-xl font-bold mt-1">₦{{ inventory_value|floatformat:2 }}</h3>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <small class="text-slate-500">Growth</small>
-        <h2 class="text-lg font-bold {% if growth_rate < 0 %}text-red-500{% else %}text-green-500{% endif %}">
-            {{ growth_rate|floatformat:2 }}%
-        </h2>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      <p class="text-xs uppercase tracking-wide text-slate-500">Monthly Growth</p>
+      <h3 class="text-xl font-bold mt-1 {% if growth_rate < 0 %}text-red-500{% else %}text-emerald-500{% endif %}">{{ growth_rate|floatformat:2 }}%</h3>
     </div>
 
 </div>
 
 <!-- CHARTS -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <h4 class="mb-2 font-semibold">Revenue + Forecast</h4>
-        <canvas id="salesChart"></canvas>
-    </div>
-
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <h4 class="mb-2 font-semibold">Profit Trend</h4>
-        <canvas id="profitChart"></canvas>
-    </div>
-
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <h4 class="mb-2 font-semibold">Monthly Revenue</h4>
-        <canvas id="monthlyChart"></canvas>
-    </div>
-
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <h4 class="mb-2 font-semibold">Breakdown</h4>
-        <canvas id="pieChart"></canvas>
-    </div>
-
 </div>
 
-<!-- TOP PRODUCTS -->
-<div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-    <h4 class="font-semibold mb-3">Top Products</h4>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="font-semibold">Revenue Forecast Engine</h4>
+        <span class="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700">Confidence {{ prediction_confidence }}%</span>
+      </div>
+      <canvas id="salesChart" height="120"></canvas>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <h4 class="font-semibold mb-2">Smart Alerts</h4>
+      <div class="space-y-2 text-sm">
+        {% for a in alerts %}
+          <div class="p-2 rounded bg-amber-50 text-amber-900 border border-amber-100">⚠ {{ a }}</div>
+        {% empty %}
+          <div class="p-2 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">✅ No urgent risks detected.</div>
+        {% endfor %}
+      </div>
+    </div>
+</div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <h4 class="mb-2 font-semibold">Profit Trend</h4>
+      <canvas id="profitChart"></canvas>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <h4 class="mb-2 font-semibold">Monthly Revenue</h4>
+      <canvas id="monthlyChart"></canvas>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <h4 class="mb-2 font-semibold">Revenue / Cost / Profit Mix</h4>
+      <canvas id="pieChart"></canvas>
+    </div>
+
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <h4 class="mb-2 font-semibold">AI Copilot Insights</h4>
+      <div class="space-y-2 text-sm">
+        {% for insight in ai_insights %}
+          <div class="p-2 rounded bg-sky-50 border border-sky-100 text-sky-900">🤖 {{ insight }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+    <h4 class="font-semibold mb-3">Top Products by Revenue</h4>
 
     <table class="w-full text-sm">
         <tr class="text-left text-slate-500">
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Revenue</th>
-            <th>Status</th>
-        </tr>
-
-        {% for p in top_products %}
-        <tr class="border-t">
-            <td>{{ p.product__name }}</td>
-            <td>{{ p.total_qty }}</td>
-            <td>₦{{ p.total_revenue|floatformat:2 }}</td>
-            <td>
-                <span class="px-2 py-1 rounded text-xs
-                    {% if p.total_qty < 5 %}bg-red-100 text-red-600{% else %}bg-green-100 text-green-600{% endif %}">
-                    {% if p.total_qty < 5 %}Low{% else %}Good{% endif %}
-                </span>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="4" class="text-center py-4 text-slate-400">No data</td>
-        </tr>
-        {% endfor %}
+        <th class="pb-2">Product</th>
+        <th class="pb-2">Qty</th>
+        <th class="pb-2">Revenue</th>
+        <th class="pb-2">Status</th>
+      </tr>
+      {% for p in top_products %}
+      <tr class="border-t border-slate-100 dark:border-slate-700">
+        <td class="py-2">{{ p.product__name }}</td>
+        <td>{{ p.total_qty }}</td>
+        <td>₦{{ p.total_revenue|floatformat:2 }}</td>
+        <td>
+          <span class="px-2 py-1 rounded text-xs {% if p.total_qty < 5 %}bg-red-100 text-red-600{% else %}bg-emerald-100 text-emerald-700{% endif %}">
+            {% if p.total_qty < 5 %}Low{% else %}Healthy{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-center py-4 text-slate-400">No product data available.</td></tr>
+      {% endfor %}
     </table>
-</div>
+      </div>
 
 </div>
 
 <!-- JS -->
 <script>
 
-function parse(data){
-    try { return JSON.parse(data) } catch { return [] }
+function parse(data) {
+  try { return JSON.parse(data) } catch { return [] }
 }
 
 const salesDates = parse('{{ sales_dates|escapejs }}')
 const salesValues = parse('{{ sales_values|escapejs }}')
 const forecastDates = parse('{{ forecast_dates|escapejs }}')
 const forecastValues = parse('{{ forecast_values|escapejs }}')
+const forecastFloor = parse('{{ forecast_floor|escapejs }}')
+const forecastCeiling = parse('{{ forecast_ceiling|escapejs }}')
 
 const profitDates = parse('{{ profit_dates|escapejs }}')
 const profitValues = parse('{{ profit_values|escapejs }}')
@@ -144,54 +154,93 @@ const profitValues = parse('{{ profit_values|escapejs }}')
 const monthlyLabels = parse('{{ monthly_labels|escapejs }}')
 const monthlyValues = parse('{{ monthly_values|escapejs }}')
 
-// SALES
 new Chart(document.getElementById('salesChart'), {
     type: 'line',
-    data: {
-        labels: [...salesDates, ...forecastDates],
-        datasets: [
-            { label: 'Revenue', data: salesValues },
-            {
-                label: 'Forecast',
-                data: [...Array(salesValues.length).fill(null), ...forecastValues],
-                borderDash: [6,6]
-            }
-        ]
+  data: {
+    labels: [...salesDates, ...forecastDates],
+    datasets: [
+      {
+        label: 'Actual Revenue',
+        data: [...salesValues, ...Array(forecastValues.length).fill(null)],
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,0.08)',
+        tension: 0.35,
+        fill: true
+      },
+      {
+        label: 'AI Forecast',
+        data: [...Array(salesValues.length).fill(null), ...forecastValues],
+        borderColor: '#7c3aed',
+        borderDash: [6, 6],
+        tension: 0.35
+      },
+      {
+        label: 'Best-case',
+        data: [...Array(salesValues.length).fill(null), ...forecastCeiling],
+        borderColor: '#0ea5e9',
+        borderWidth: 1,
+        pointRadius: 0,
+        tension: 0.3
+      },
+      {
+        label: 'Worst-case',
+        data: [...Array(salesValues.length).fill(null), ...forecastFloor],
+        borderColor: '#f97316',
+        borderWidth: 1,
+        pointRadius: 0,
+        tension: 0.3
+      }
+    ]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     }
 })
 
-// PROFIT
 new Chart(document.getElementById('profitChart'), {
     type: 'line',
-    data: { labels: profitDates, datasets: [{ data: profitValues }] }
+    data: {
+        labels: profitDates,
+        datasets: [{
+        label: 'Profit',
+        data: profitValues,
+        borderColor: '#16a34a',
+        backgroundColor: 'rgba(22,163,74,0.1)',
+        fill: true,
+        tension: 0.3
+        }]
+    }
 })
 
-// MONTHLY
 new Chart(document.getElementById('monthlyChart'), {
     type: 'bar',
-    data: { labels: monthlyLabels, datasets: [{ data: monthlyValues }] }
+    data: {
+        labels: monthlyLabels,
+        datasets: [{
+            label: 'Monthly Revenue',
+            data: monthlyValues,
+            backgroundColor: '#3b82f6'
+        }]
+    }
 })
 
-// PIE
 new Chart(document.getElementById('pieChart'), {
-    type: 'pie',
+    type: 'doughnut',
     data: {
-        labels: ['Revenue','Cost','Profit'],
+        labels: ['Revenue', 'Cost', 'Profit'],
         datasets: [{
-            data: [
-                Number('{{ total_revenue|default:0 }}'),
-                Number('{{ total_cost|default:0 }}'),
-                Number('{{ profit|default:0 }}')
-            ]
+        data: [
+            Number('{{ total_revenue|default:0 }}'),
+            Number('{{ total_cost|default:0 }}'),
+            Number('{{ profit|default:0 }}')
+        ],
+        backgroundColor: ['#2563eb', '#f59e0b', '#16a34a']
         }]
     }
 })
 
 // FILTER
-document.getElementById("rangeFilter").addEventListener("change", function(){
-    window.location.href = "?range=" + this.value
+document.getElementById('rangeFilter').addEventListener('change', function () {
+  window.location.href = '?range=' + this.value
 })
-
 </script>
-
 {% endblock %}

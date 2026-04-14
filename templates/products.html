@@ -238,27 +238,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // MODAL
 function openModal(){
-  const modal = document.getElementById("productModal")
-  modal.classList.remove("hidden")
-  modal.classList.add("flex")
+  const modal = document.getElementById("productModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
 }
 
 function closeModal(){
-  const modal = document.getElementById("productModal")
-  modal.classList.add("hidden")
-  modal.classList.remove("flex")
+  const modal = document.getElementById("productModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
 }
 
 function openCategoryModal(){
-  const modal = document.getElementById("categoryModal")
-  modal.classList.remove("hidden")
-  modal.classList.add("flex")
+  const modal = document.getElementById("categoryModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
 }
 
 function closeCategoryModal(){
-  const modal = document.getElementById("categoryModal")
-  modal.classList.add("hidden")
-  modal.classList.remove("flex")
+  const modal = document.getElementById("categoryModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
 }
 </script>
 
