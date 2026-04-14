@@ -56,6 +56,21 @@
 
 </div>
 
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+    <p class="text-xs uppercase tracking-wide text-slate-500">Total Products</p>
+    <h3 class="text-xl font-bold mt-1">{{ total_products }}</h3>
+  </div>
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+    <p class="text-xs uppercase tracking-wide text-slate-500">Low Stock Products</p>
+    <h3 class="text-xl font-bold mt-1 text-amber-500">{{ low_stock_count }}</h3>
+  </div>
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+    <p class="text-xs uppercase tracking-wide text-slate-500">Out of Stock Products</p>
+    <h3 class="text-xl font-bold mt-1 text-red-500">{{ out_of_stock_count }}</h3>
+  </div>
+</div>
+
 <!-- CHARTS -->
 </div>
 
@@ -86,12 +101,12 @@
     </div>
 
     <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-      <h4 class="mb-2 font-semibold">Monthly Revenue</h4>
+      <h4 class="mb-2 font-semibold">Sales by Month (Bar Chart)</h4>
       <canvas id="monthlyChart"></canvas>
     </div>
 
     <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-      <h4 class="mb-2 font-semibold">Revenue / Cost / Profit Mix</h4>
+      <h4 class="mb-2 font-semibold">Sales / Cost / Profit Split (Pie Chart)</h4>
       <canvas id="pieChart"></canvas>
     </div>
 
@@ -102,6 +117,17 @@
           <div class="p-2 rounded bg-sky-50 border border-sky-100 text-sky-900">🤖 {{ insight }}</div>
         {% endfor %}
       </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <h4 class="mb-2 font-semibold">Top Products by Revenue (Bar Chart)</h4>
+      <canvas id="productRevenueChart"></canvas>
+    </div>
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <h4 class="mb-2 font-semibold">Inventory Distribution (Pie Chart)</h4>
+      <canvas id="inventoryChart"></canvas>
     </div>
   </div>
 
@@ -153,6 +179,10 @@ const profitValues = parse('{{ profit_values|escapejs }}')
 
 const monthlyLabels = parse('{{ monthly_labels|escapejs }}')
 const monthlyValues = parse('{{ monthly_values|escapejs }}')
+const topProductLabels = parse('{{ top_product_labels|escapejs }}')
+const topProductRevenue = parse('{{ top_product_revenue|escapejs }}')
+const inventorySegmentLabels = parse('{{ inventory_segment_labels|escapejs }}')
+const inventorySegmentValues = parse('{{ inventory_segment_values|escapejs }}')
 
 new Chart(document.getElementById('salesChart'), {
     type: 'line',
@@ -224,7 +254,7 @@ new Chart(document.getElementById('monthlyChart'), {
 })
 
 new Chart(document.getElementById('pieChart'), {
-    type: 'doughnut',
+    type: 'pie',
     data: {
         labels: ['Revenue', 'Cost', 'Profit'],
         datasets: [{
@@ -234,6 +264,33 @@ new Chart(document.getElementById('pieChart'), {
             Number('{{ profit|default:0 }}')
         ],
         backgroundColor: ['#2563eb', '#f59e0b', '#16a34a']
+        }]
+    }
+})
+
+new Chart(document.getElementById('productRevenueChart'), {
+    type: 'bar',
+    data: {
+        labels: topProductLabels,
+        datasets: [{
+            label: 'Product Revenue',
+            data: topProductRevenue,
+            backgroundColor: '#6366f1'
+        }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } }
+    }
+})
+
+new Chart(document.getElementById('inventoryChart'), {
+    type: 'pie',
+    data: {
+        labels: inventorySegmentLabels,
+        datasets: [{
+            data: inventorySegmentValues,
+            backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
         }]
     }
 })

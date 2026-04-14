@@ -151,6 +151,8 @@ def build_dashboard_context(company, days=30):
         has_sales=False
     ).count()
     low_stock = Product.objects.filter(company=company, quantity__lte=5).count()
+    out_of_stock = Product.objects.filter(company=company, quantity=0).count()
+    total_products = Product.objects.filter(company=company).count()
 
     top_products = (
         sales_items_qs.values("product__name")
@@ -163,6 +165,14 @@ def build_dashboard_context(company, days=30):
         weekday_totals[item["date"].strftime("%A")] += _safe_float(item["total"])
 
     peak_sales_day = max(weekday_totals.items(), key=lambda x: x[1])[0] if weekday_totals else "N/A"
+
+    inventory_segments = {
+        "In Stock": max(total_products - low_stock, 0),
+        "Low Stock": low_stock,
+        "Out of Stock": out_of_stock,
+    }
+
+    top_products_list = list(top_products)
 
     alerts = []
     if profit < 0:
@@ -205,5 +215,12 @@ def build_dashboard_context(company, days=30):
         "monthly_values": json.dumps(monthly_values),
         "dead_stock_count": dead_stock_count,
         "low_stock_count": low_stock,
-        "top_products": top_products,
+        "out_of_stock_count": out_of_stock,
+        "total_products": total_products,
+        "top_products": top_products_list,
+        "top_product_labels": json.dumps([item["product__name"] for item in top_products_list]),
+        "top_product_revenue": json.dumps([_safe_float(item["total_revenue"]) for item in top_products_list]),
+        "top_product_quantity": json.dumps([_safe_float(item["total_qty"]) for item in top_products_list]),
+        "inventory_segment_labels": json.dumps(list(inventory_segments.keys())),
+        "inventory_segment_values": json.dumps(list(inventory_segments.values())),
     }
