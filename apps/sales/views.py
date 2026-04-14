@@ -8,7 +8,9 @@ from django.db import transaction
 from apps.products.models import Product
 from .models import Sale, SaleItem
 
-from django.db.models import Sum
+from .services.analytics import build_sales_analytics
+
+#from django.db.models import Sum
 
 # =========================
 # CREATE SALE
@@ -78,8 +80,6 @@ def create_sale(request):
 # =========================
 
 @login_required
-
-@login_required
 def sales_view(request):
     company = getattr(request.user, "company", None)
 
@@ -96,9 +96,15 @@ def sales_view(request):
 
     if request.user.role not in ["staff", "user"]:
         return redirect("dashboard")
+    
+    analytics = build_sales_analytics(sales)
 
     return render(request, "sales.html", {
-        "sales": sales
+        "sales": sales,
+        "metrics": analytics["metrics"],
+        "charts": analytics["charts"],
+        "insights": analytics["insights"],
+    
     })
 
 # =========================

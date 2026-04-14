@@ -5,21 +5,72 @@
 <div class="space-y-6">
 
   <!-- HEADER -->
-  <div class="flex justify-between items-center">
-    <h2 class="text-xl font-semibold">Sales</h2>
+  <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div>
+      <h2 class="text-xl font-semibold">Sales Intelligence</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400">AI-assisted analytics for operational and revenue decisions.</p>
+    </div>
 
     <a href="{% url 'create_sale' %}"
-       class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+        class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition w-fit">
       + New Sale
     </a>
   </div>
 
   <!-- TABLE CARD -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-xl shadow-sm">
+      <p class="text-xs text-slate-500">Revenue (30d)</p>
+      <h3 class="text-xl font-semibold text-green-600">₦{{ metrics.revenue_30d|floatformat:2 }}</h3>
+    </div>
+    <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-xl shadow-sm">
+      <p class="text-xs text-slate-500">Units Sold (30d)</p>
+      <h3 class="text-xl font-semibold">{{ metrics.units_30d }}</h3>
+    </div>
+    <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-xl shadow-sm">
+      <p class="text-xs text-slate-500">Estimated Profit (30d)</p>
+      <h3 class="text-xl font-semibold {% if metrics.estimated_profit_30d < 0 %}text-red-500{% else %}text-emerald-500{% endif %}">
+        ₦{{ metrics.estimated_profit_30d|floatformat:2 }}
+      </h3>
+    </div>
+    <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-xl shadow-sm">
+      <p class="text-xs text-slate-500">Average Order Value</p>
+      <h3 class="text-xl font-semibold">₦{{ metrics.average_order_value|floatformat:2 }}</h3>
+    </div>
+  </div>
+
+  <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4">
+    <h3 class="font-semibold mb-2">🤖 AI Analytics Highlights</h3>
+    <ul class="space-y-1 text-sm text-slate-700 dark:text-slate-200">
+      {% for insight in insights %}
+      <li>• {{ insight }}</li>
+      {% empty %}
+      <li>• Not enough recent data for AI insights yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4">
+      <h4 class="font-semibold mb-3">Revenue Trend (Last 30 Days)</h4>
+      <canvas id="salesRevenueChart"></canvas>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4">
+      <h4 class="font-semibold mb-3">Top Product Revenue (Bar Chart)</h4>
+      <canvas id="salesProductsChart"></canvas>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 lg:col-span-2">
+      <h4 class="font-semibold mb-3">Revenue / Cost / Profit Mix (Pie Chart)</h4>
+      <div class="max-w-md mx-auto">
+        <canvas id="salesMixChart"></canvas>
+      </div>
+    </div>
+  </div>
+
   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-
     <table class="w-full text-sm">
-
-      <!-- HEADER -->
       <thead class="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-300">
         <tr>
           <th class="p-3 text-left">Product</th>
@@ -30,28 +81,14 @@
         </tr>
       </thead>
 
-      <!-- BODY -->
       <tbody>
 
         {% for item in sales %}
         <tr class="border-t hover:bg-slate-50 dark:hover:bg-slate-700 transition">
-
-          <!-- PRODUCT -->
-          <td class="p-3 font-medium">
-            {{ item.product.name }}
-          </td>
-
-          <!-- QUANTITY -->
-          <td class="p-3">
-            {{ item.quantity }}
-          </td>
-
-          <!-- TOTAL -->
-          <td class="p-3 font-semibold text-green-600 dark:text-green-400">
-            ₦{{ item.total_price|floatformat:2 }}
-          </td>
-
-          <!-- STATUS -->
+  
+          <td class="p-3 font-medium">{{ item.product.name }}</td>
+          <td class="p-3">{{ item.quantity }}</td>
+          <td class="p-3 font-semibold text-green-600 dark:text-green-400">₦{{ item.total_price|floatformat:2 }}</td>
           <td class="p-3">
             <span class="px-2 py-1 rounded-md text-xs font-medium
               {% if item.sale.status == 'completed' %}
@@ -63,27 +100,68 @@
               {{ item.sale.status|title }}
             </span>
           </td>
-
-          <!-- DATE -->
-          <td class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">
-            {{ item.sale.created_at|date:"M d, Y H:i" }}
-          </td>
-
+          <td class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ item.sale.created_at|date:"M d, Y H:i" }}</td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="p-10 text-center text-slate-400">
-            No sales recorded yet
-          </td>
+          <td colspan="5" class="p-10 text-center text-slate-400">No sales recorded yet</td>
         </tr>
         {% endfor %}
-
       </tbody>
-
     </table>
 
   </div>
 
 </div>
+<script>
+function safeParse(data){
+  try { return JSON.parse(data) } catch { return [] }
+}
+
+const revenueDates = safeParse('{{ charts.dates|escapejs }}')
+const revenueValues = safeParse('{{ charts.revenue|escapejs }}')
+const productLabels = safeParse('{{ charts.product_labels|escapejs }}')
+const productValues = safeParse('{{ charts.product_values|escapejs }}')
+const pieValues = safeParse('{{ charts.pie_values|escapejs }}')
+
+new Chart(document.getElementById('salesRevenueChart'), {
+  type: 'line',
+  data: {
+    labels: revenueDates,
+    datasets: [{
+      label: 'Revenue',
+      data: revenueValues,
+      borderColor: '#4f46e5',
+      backgroundColor: 'rgba(79,70,229,0.20)',
+      fill: true,
+      tension: 0.3,
+    }]
+  }
+})
+
+new Chart(document.getElementById('salesProductsChart'), {
+  type: 'bar',
+  data: {
+    labels: productLabels,
+    datasets: [{
+      label: 'Revenue by Product',
+      data: productValues,
+      backgroundColor: '#10b981',
+      borderRadius: 6,
+    }]
+  }
+})
+
+new Chart(document.getElementById('salesMixChart'), {
+  type: 'pie',
+  data: {
+    labels: ['Revenue', 'Estimated Cost', 'Estimated Profit'],
+    datasets: [{
+      data: pieValues,
+      backgroundColor: ['#6366f1', '#f59e0b', '#22c55e'],
+    }]
+  }
+})
+</script>
 
 {% endblock %}
