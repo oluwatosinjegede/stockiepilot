@@ -33,7 +33,7 @@
   </div>
 
   <!-- KPIs -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
     <div class="card">
       <p class="text-slate-500 text-sm">Total Products</p>
@@ -49,18 +49,42 @@
       <p class="text-slate-500 text-sm">Inventory Value</p>
       <h3 class="font-semibold">₦{{ inventory_value|floatformat:2 }}</h3>
     </div>
+    <div class="card">
+      <p class="text-slate-500 text-sm">Avg Stock / Product</p>
+      <h3 class="font-semibold">{{ avg_stock_per_product }}</h3>
+    </div>
 
   </div>
 
   <!-- CHART -->
-  <div class="card">
-    <h4 class="font-semibold mb-2">Stock Distribution</h4>
+   <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4">
+    <h3 class="font-semibold mb-2">🤖 Inventory Analytics Highlights</h3>
+    <ul class="space-y-1 text-sm text-slate-700 dark:text-slate-200">
+      {% for insight in insights %}
+      <li>• {{ insight }}</li>
+      {% empty %}
+      <li>• Not enough data for insights yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
 
-    {% if products %}
-      <canvas id="stockChart"></canvas>
-    {% else %}
-      <p class="text-slate-400 text-sm">No data to display</p>
-    {% endif %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card">
+      <h4 class="font-semibold mb-3">Stock Trend (Cumulative)</h4>
+      <canvas id="stockTrendChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h4 class="font-semibold mb-3">Top Products by Stock (Bar Chart)</h4>
+      <canvas id="stockBarChart"></canvas>
+    </div>
+
+    <div class="card lg:col-span-2">
+      <h4 class="font-semibold mb-3">Inventory Mix (Pie Chart)</h4>
+      <div class="max-w-md mx-auto">
+        <canvas id="stockMixChart"></canvas>
+      </div>
+    </div>
   </div>
 
   <!-- TABLE -->
@@ -240,31 +264,58 @@
 </div>
 {% endif %}
 
-<!-- LOAD CHART SAFELY -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
+  function safeParse(data){
+  try { return JSON.parse(data) } catch { return [] }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
 
-  const chartEl = document.getElementById('stockChart');
+  const trendDates = safeParse('{{ charts.trend_dates|escapejs }}')
+  const trendValues = safeParse('{{ charts.trend_values|escapejs }}')
+  const barLabels = safeParse('{{ charts.product_labels|escapejs }}')
+  const barValues = safeParse('{{ charts.product_values|escapejs }}')
+  const pieValues = safeParse('{{ charts.pie_values|escapejs }}')
 
-  if (chartEl && typeof Chart !== "undefined") {
+  if (typeof Chart !== "undefined") {
+    new Chart(document.getElementById('stockTrendChart'), {
+      type: 'line',
+      data: {
+        labels: trendDates,
+        datasets: [{
+          label: 'Cumulative Stock Units',
+          data: trendValues,
+          borderColor: '#4f46e5',
+          backgroundColor: 'rgba(79,70,229,0.20)',
+          fill: true,
+          tension: 0.3,
+        }]
+      }
+    })
 
-    const labels = [{% for p in products %}"{{ p.name|escapejs }}",{% endfor %}]
-    const data = [{% for p in products %}{{ p.quantity|default:0 }},{% endfor %}]
+    new Chart(document.getElementById('stockBarChart'), {
+      type: 'bar',
+      data: {
+        labels: barLabels,
+        datasets: [{
+          label: 'Stock by Product',
+          data: barValues,
+          backgroundColor: '#10b981',
+          borderRadius: 6,
+        }]
+      }
+    })
 
-    if (labels.length > 0) {
-      new Chart(chartEl, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Stock',
-            data: data
-          }]
-        }
-      });
-    }
+    new Chart(document.getElementById('stockMixChart'), {
+      type: 'pie',
+      data: {
+        labels: ['Healthy Stock', 'Low Stock', 'Out of Stock'],
+        datasets: [{
+          data: pieValues,
+          backgroundColor: ['#6366f1', '#f59e0b', '#ef4444'],
+        }]
+      }
+    })
   }
 
 });

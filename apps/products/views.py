@@ -1,13 +1,18 @@
+import json
 from decimal import Decimal, InvalidOperation
 import uuid
+from collections import defaultdict
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
+from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.timezone import now, timedelta
 
 from .models import Category, Product
+from apps.sales.models import SaleItem
 
 
 PLAN_LIMITS = {
@@ -210,22 +215,81 @@ def _build_product_analytics(products):
     low_stock_count = 0
     inventory_value = 0
     alerts = []
+    out_of_stock_count = 0
+    total_stock_units = 0
+    avg_stock_per_product = 0
+    top_products = []
+    date_from = now() - timedelta(days=30)
+    stock_trend_map = defaultdict(int)
 
     for p in products:
         qty = p.quantity or 0
         cost = float(p.cost_price or 0)
 
         inventory_value += qty * cost
+        total_stock_units += qty
+        stock_trend_map[p.created_at.date().isoformat()] += qty
 
         if qty <= 5:
             low_stock_count += 1
             alerts.append(f"{p.name} is low in stock")
+            if qty == 0:
+            out_of_stock_count += 1
+
+    if total_products:
+        avg_stock_per_product = total_stock_units / total_products
+
+    top_products_qs = products.order_by("-quantity")[:7]
+    top_products = list(top_products_qs)
+
+    sorted_dates = sorted(stock_trend_map.keys())
+    cumulative = 0
+    stock_levels = []
+    for dt in sorted_dates:
+        cumulative += stock_trend_map[dt]
+        stock_levels.append(cumulative)
+
+    sales_snapshot = (
+        SaleItem.objects
+        .filter(product__company=products.first().company if total_products else None, sale__created_at__gte=date_from)
+        .values("product__name")
+        .annotate(total_qty=Sum("quantity"), total_revenue=Sum("total_price"))
+        .order_by("-total_revenue")[:5]
+    ) if total_products else []
+
+    insights = [
+        f"Inventory coverage: {total_stock_units} units across {total_products} products.",
+        f"Average stock per product is {avg_stock_per_product:.1f} units.",
+        f"{low_stock_count} product(s) need replenishment soon.",
+    ]
+
+    if sales_snapshot:
+        top_sale = sales_snapshot[0]
+        insights.append(
+            f"Top sales driver (30d): {top_sale['product__name']} with {top_sale['total_qty'] or 0} unit(s) sold."
+        )
+    if out_of_stock_count:
+        insights.append(f"{out_of_stock_count} product(s) are currently out of stock.")
 
     return {
         "total_products": total_products,
         "low_stock_count": low_stock_count,
+        "out_of_stock_count": out_of_stock_count,
+        "avg_stock_per_product": round(avg_stock_per_product, 1),
         "inventory_value": round(inventory_value, 2),
         "smart_alerts": alerts,
+        "insights": insights,
+        "charts": {
+            "trend_dates": json.dumps(sorted_dates),
+            "trend_values": json.dumps(stock_levels),
+            "product_labels": json.dumps([p.name for p in top_products]),
+            "product_values": json.dumps([p.quantity or 0 for p in top_products]),
+            "pie_values": json.dumps([
+                max(total_products - low_stock_count - out_of_stock_count, 0),
+                low_stock_count,
+                out_of_stock_count,
+            ]),
+        },
     }
 
 
