@@ -10,6 +10,11 @@ from apps.products.models import Product
 # =========================
 
 class Sale(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('paid', 'Paid in Full'),
+        ('partial', 'Part Payment'),
+    ]
+
     company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
@@ -17,6 +22,29 @@ class Sale(models.Model):
     )
 
     total_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default='paid'
+    )
+
+    customer_name = models.CharField(
+        max_length=255,
+        blank=True
+    )
+
+    amount_paid = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    balance = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
