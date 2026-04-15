@@ -6,12 +6,18 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.decorators import login_required
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils import timezone
+from django.http import HttpResponse
 
 from apps.companies.models import Company
 from apps.subscriptions.services import create_initial_subscription
 from apps.billing.services import create_signup_invoice
-from apps.users.models import EmailVerification
-from apps.users.services import send_verification_email, send_password_reset_email
+from apps.users.models import EmailVerification, CompanyUserApproval
+from apps.users.services import (
+    send_verification_email,
+    send_password_reset_email,
+    send_company_authorization_email,
+)
 
 User = get_user_model()
 
@@ -65,6 +71,7 @@ def register_view(request):
                     messages.error(request, "Selected company not found.")
                     return render(request, "auth/register.html", {"existing_companies": existing_companies})
                 is_company_admin = False
+                onboarding_status = "pending_approval"
             else:
                 existing_company = Company.objects.filter(name__iexact=new_company_name).first()
                 if existing_company:
@@ -78,6 +85,7 @@ def register_view(request):
                     address=address
                 )
                 is_company_admin = True
+                onboarding_status = "pending_email_verification"
 
             # =========================
             # CREATE USER (INACTIVE)
@@ -92,7 +100,8 @@ def register_view(request):
                 address=address,
                 is_active=False,
                 is_staff=is_company_admin,
-                role="staff" if is_company_admin else "user"
+                role="staff" if is_company_admin else "user",
+                onboarding_status=onboarding_status,
             )
 
             # =========================
@@ -115,7 +124,24 @@ def register_view(request):
                     "Account created, but email could not be sent. Please request verification email."
                 )
 
-            messages.success(request, "Account created successfully. Please verify your email.")
+            if not is_company_admin:
+                try:
+                    approval_request = CompanyUserApproval.objects.create(user=user, company=company)
+                    send_company_authorization_email(approval_request, request=request)
+                except Exception as e:
+                    print("APPROVAL EMAIL ERROR:", str(e))
+                    messages.warning(
+                        request,
+                        "Account created in pending approval state, but company authorization email could not be sent."
+                    )
+
+            if is_company_admin:
+                messages.success(request, "Account created successfully. Please verify your email.")
+            else:
+                messages.success(
+                    request,
+                    "Account created and marked pending company approval. Verify your email and wait for company authorization.",
+                )
             return redirect('login')
 
         except Exception as e:
@@ -138,15 +164,63 @@ def verify_email(request, token):
 
     user = verification.user
 
-    user.is_active = True
     user.is_email_verified = True
+    if user.onboarding_status == "pending_approval":
+        messages.success(
+            request,
+            "Email verified. Your account is pending company approval before login is allowed.",
+        )
+    elif user.onboarding_status == "rejected":
+        messages.error(request, "This account access request was rejected by the company.")
+    else:
+        user.is_active = True
+        user.onboarding_status = "active"
+        messages.success(request, "Email verified successfully. You can now login.")
     user.save()
 
     verification.is_used = True
     verification.save()
 
-    messages.success(request, "Email verified successfully. You can now login.")
     return redirect('login')
+
+def approve_company_user(request, token):
+    approval = get_object_or_404(CompanyUserApproval, token=token)
+
+    if approval.status != "pending":
+        messages.info(request, f"This request has already been {approval.status}.")
+        return redirect("login")
+
+    user = approval.user
+    approval.status = "approved"
+    approval.reviewed_at = timezone.now()
+    approval.save(update_fields=["status", "reviewed_at"])
+
+    user.onboarding_status = "active"
+    user.is_active = True
+    user.save(update_fields=["onboarding_status", "is_active"])
+
+    messages.success(request, f"Access approved for {user.email}. The user can now sign in.")
+    return redirect("login")
+
+
+def reject_company_user(request, token):
+    approval = get_object_or_404(CompanyUserApproval, token=token)
+
+    if approval.status != "pending":
+        messages.info(request, f"This request has already been {approval.status}.")
+        return redirect("login")
+
+    user = approval.user
+    approval.status = "rejected"
+    approval.reviewed_at = timezone.now()
+    approval.save(update_fields=["status", "reviewed_at"])
+
+    user.onboarding_status = "rejected"
+    user.is_active = False
+    user.save(update_fields=["onboarding_status", "is_active"])
+
+    messages.success(request, f"Access rejected for {user.email}.")
+    return redirect("login")
 
 
 # =========================
@@ -199,6 +273,15 @@ def login_view(request):
         if user is None:
             messages.error(request, "Invalid credentials")
             return render(request, "auth/login.html")
+        
+        if user.onboarding_status == "pending_approval":
+            messages.error(request, "Your account is pending company approval.")
+            return render(request, "auth/login.html")
+
+        if user.onboarding_status == "rejected":
+            messages.error(request, "Your company access request was rejected.")
+            return render(request, "auth/login.html")
+
 
         if not user.is_email_verified:
             messages.error(request, "Please verify your email before logging in")
@@ -361,3 +444,8 @@ def create_user_view(request):
 
         messages.success(request, "User created successfully.")
         return redirect("dashboard")
+    
+
+
+def approve_company_user(request, token):
+    return HttpResponse("User approved successfully")
