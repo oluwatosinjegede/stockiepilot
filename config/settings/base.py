@@ -131,7 +131,7 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
-    "StockiePilot <no-reply@stockiepilot.telewest.com.ng>"
+    "StockiePilot <no-reply@stokiepilot.rantcorner.com.ng>"
 )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -139,7 +139,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # =========================
 # FRONTEND URL (IMPORTANT)
 # =========================
-BASE_URL = os.getenv("BASE_URL", "https://your-app.up.railway.app")
+BASE_URL = os.getenv("BASE_URL", "https://stockiepilot.up.railway.app")
 
 
 # =========================
