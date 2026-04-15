@@ -54,6 +54,7 @@ MIDDLEWARE = [
 
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.idle_timeout_middleware.IdleTimeoutMiddleware',
 
     'core.middleware.tenant_middleware.TenantMiddleware',
 
@@ -103,6 +104,7 @@ DATABASES = {
 AUTH_USER_MODEL = 'users.User'
 LOGIN_URL = '/login/'
 
+AUTO_LOGOUT_IDLE_SECONDS = int(os.getenv("AUTO_LOGOUT_IDLE_SECONDS", "300"))
 
 # =========================
 # STATIC / MEDIA
