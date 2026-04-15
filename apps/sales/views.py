@@ -153,20 +153,39 @@ def sales_view(request):
         .order_by("-created_at")
     )
 
+    sale_items = (
+        SaleItem.objects
+        .filter(sale__company=company)
+        .select_related("sale", "product")
+        .order_by("-sale__created_at", "-id")
+    )
+
+
     # ================= SAFE ANALYTICS =================
     try:
-        analytics = build_sales_analytics(sales)
+        analytics = build_sales_analytics(sale_items)
     except Exception:
         analytics = {
-            "metrics": {},
-            "charts": {},
+            "metrics": {
+                "revenue_30d": 0,
+                "units_30d": 0,
+                "estimated_profit_30d": 0,
+                "average_order_value": 0,
+            },
+            "charts": {
+                "dates": "[]",
+                "revenue": "[]",
+                "product_labels": "[]",
+                "product_values": "[]",
+                "pie_values": "[]",
+            },
             "insights": []
         }
 
     debt_sales = sales.filter(balance__gt=0)
 
     return render(request, "sales.html", {
-        "sales": sales,
+        "sales": sale_items,
         "metrics": analytics.get("metrics", {}),
         "charts": analytics.get("charts", {}),
         "insights": analytics.get("insights", []),
