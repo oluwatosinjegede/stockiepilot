@@ -21,6 +21,13 @@ class Sale(models.Model):
         related_name='sales'
     )
 
+    products = models.ManyToManyField(
+        Product,
+        through="SaleItem",
+        related_name="sales",
+        blank=True,
+    )
+
     total_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -62,6 +69,22 @@ class Sale(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def recalculate_totals(self):
+        from django.db.models import Sum
+        from decimal import Decimal
+
+        total = self.items.aggregate(total=Sum("total_price"))["total"] or Decimal("0")
+        self.total_amount = total
+
+        if self.payment_status == "paid":
+            self.amount_paid = total
+            self.balance = Decimal("0")
+        else:
+            self.balance = max(total - Decimal(self.amount_paid or 0), Decimal("0"))
+
+        self.status = "pending" if self.balance > 0 else "completed"
+
+
     def __str__(self):
         return f"{self.company.name} - ₦{self.total_amount}"
 
@@ -98,6 +121,14 @@ class SaleItem(models.Model):
     def save(self, *args, **kwargs):
         self.total_price = self.quantity * self.unit_price
         super().save(*args, **kwargs)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sale", "product"],
+                name="unique_product_per_sale",
+            )
+        ]
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"

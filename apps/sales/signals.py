@@ -1,7 +1,6 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from django.db.models import Sum
-from decimal import Decimal
+
 from .models import SaleItem
 
 
@@ -59,17 +58,5 @@ def restore_stock_on_delete(sender, instance, **kwargs):
 def update_sale_total(sender, instance, **kwargs):
     sale = instance.sale
 
-    total = sale.items.aggregate(
-        total=Sum("total_price")
-    )["total"] or 0
-
-    sale.total_amount = total
-    
-    if sale.payment_status == "paid":
-        sale.amount_paid = total
-        sale.balance = Decimal("0")
-    else:
-        sale.balance = max(Decimal(total) - Decimal(sale.amount_paid or 0), Decimal("0"))
-
-    sale.status = "pending" if sale.balance > 0 else "completed"
+    sale.recalculate_totals()
     sale.save(update_fields=["total_amount", "amount_paid", "balance", "status"])

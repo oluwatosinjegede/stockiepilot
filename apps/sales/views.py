@@ -24,8 +24,8 @@ def create_sale(request):
 
     if request.method == "POST":
 
-        product_ids = request.POST.getlist("product[]") or [request.POST.get("product")]
-        quantities = request.POST.getlist("quantity[]") or [request.POST.get("quantity")]
+        product_ids = [value for value in request.POST.getlist("product[]") if value]
+        quantities = [value for value in request.POST.getlist("quantity[]") if value]
 
         payment_status = request.POST.get("payment_status", "paid")
         customer_name = (request.POST.get("customer_name") or "").strip()
@@ -34,6 +34,10 @@ def create_sale(request):
         # ================= VALIDATION =================
         if not product_ids or not quantities:
             messages.error(request, "No products selected.")
+            return redirect("create_sale")
+        
+        if len(product_ids) != len(quantities):
+            messages.error(request, "Each selected product must have a quantity.")
             return redirect("create_sale")
 
         if payment_status not in ["paid", "partial"]:
@@ -44,11 +48,11 @@ def create_sale(request):
         items = []
 
         # ================= PROCESS ITEMS =================
-        for i in range(len(product_ids)):
+        for product_id, quantity in zip(product_ids, quantities):
 
             try:
-                product = get_object_or_404(Product, id=product_ids[i], company=company)
-                qty = int(quantities[i])
+                product = get_object_or_404(Product, id=product_id, company=company)
+                qty = int(quantity)
 
                 if qty <= 0:
                     raise ValueError
@@ -100,6 +104,7 @@ def create_sale(request):
 
                 sale = Sale.objects.create(
                     company=company,
+                    total_amount=total_sale_amount,
                     payment_status=payment_status,
                     customer_name=customer_name if payment_status == "partial" else "",
                     amount_paid=amount_paid,
