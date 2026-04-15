@@ -5,8 +5,7 @@
 <div class="space-y-6">
 
 <!-- HEADER -->
-<div class="flex justify-between items-center">
-    <div class="rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-500 text-white p-6 shadow-lg">
+<div class="rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-500 text-white p-6 shadow-lg">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
         <p class="text-sm/6 text-blue-100">AI Analytics Workspace</p>
@@ -23,12 +22,12 @@
         </select>
       </div>
     </div>
-  </div>
-
-  {% if error %}
+</div>
+{% if error %}
   <div class="bg-red-100 text-red-700 p-3 rounded-lg">{{ error }}</div>
-  {% endif %}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+{% endif %}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
     <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
       <p class="text-xs uppercase tracking-wide text-slate-500">Revenue</p>
       <h3 class="text-xl font-bold mt-1">₦{{ total_revenue|floatformat:2 }}</h3>
