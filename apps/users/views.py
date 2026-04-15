@@ -91,7 +91,6 @@ def register_view(request):
                 phone=phone,
                 address=address,
                 is_active=False,
-                is_staff=True,          # IMPORTANT
                 is_staff=is_company_admin,
                 role="staff" if is_company_admin else "user"
             )
