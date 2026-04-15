@@ -21,6 +21,7 @@ User = get_user_model()
 # =========================
 @transaction.atomic
 def register_view(request):
+    existing_companies = Company.objects.order_by("name")
 
     if request.method == "POST":
 
@@ -31,37 +32,52 @@ def register_view(request):
         full_name = request.POST.get("full_name")
         phone = request.POST.get("phone")
         address = request.POST.get("address")
-        company_name = request.POST.get("company_name")
+        selected_company_id = request.POST.get("existing_company_id", "").strip()
+        new_company_name = request.POST.get("new_company_name", "").strip()
 
         # =========================
         # VALIDATION
         # =========================
-        if not all([email, password, confirm_password, full_name, phone, company_name]):
+        if not all([email, password, confirm_password, full_name, phone]):
             messages.error(request, "All required fields must be filled")
-            return render(request, "auth/register.html")
-
+            return render(request, "auth/register.html", {"existing_companies": existing_companies})
+        
         if password != confirm_password:
             messages.error(request, "Passwords do not match")
-            return render(request, "auth/register.html")
+            return render(request, "auth/register.html", {"existing_companies": existing_companies})
 
         if len(password) < 6:
             messages.error(request, "Password must be at least 6 characters")
-            return render(request, "auth/register.html")
+            return render(request, "auth/register.html", {"existing_companies": existing_companies})
 
         if User.objects.filter(email=email).exists():
             messages.error(request, "User already exists")
-            return render(request, "auth/register.html")
+            return render(request, "auth/register.html", {"existing_companies": existing_companies})
+
+        if not selected_company_id and not new_company_name:
+            messages.error(request, "Select an existing company or enter a new company name.")
+            return render(request, "auth/register.html", {"existing_companies": existing_companies})
 
         try:
-            # =========================
-            # CREATE COMPANY
-            # =========================
-            company = Company.objects.create(
-                name=company_name,
-                email=email,
-                phone=phone,
-                address=address
-            )
+            if selected_company_id:
+                company = Company.objects.filter(id=selected_company_id).first()
+                if not company:
+                    messages.error(request, "Selected company not found.")
+                    return render(request, "auth/register.html", {"existing_companies": existing_companies})
+                is_company_admin = False
+            else:
+                existing_company = Company.objects.filter(name__iexact=new_company_name).first()
+                if existing_company:
+                    messages.error(request, "Company name already exists. Please select it from the list.")
+                    return render(request, "auth/register.html", {"existing_companies": existing_companies})
+
+                company = Company.objects.create(
+                    name=new_company_name,
+                    email=email,
+                    phone=phone,
+                    address=address
+                )
+                is_company_admin = True
 
             # =========================
             # CREATE USER (INACTIVE)
@@ -76,15 +92,16 @@ def register_view(request):
                 address=address,
                 is_active=False,
                 is_staff=True,          # IMPORTANT
-                role="staff"            # IMPORTANT
+                is_staff=is_company_admin,
+                role="staff" if is_company_admin else "user"
             )
 
             # =========================
             # SUBSCRIPTION + BILLING
             # =========================
-            create_initial_subscription(company)
-            create_signup_invoice(company)
-
+            if is_company_admin:
+                create_initial_subscription(company)
+                create_signup_invoice(company)
             # =========================
             # EMAIL VERIFICATION (SAFE)
             # =========================
@@ -104,9 +121,9 @@ def register_view(request):
 
         except Exception as e:
             messages.error(request, f"Registration failed: {str(e)}")
-            return render(request, "auth/register.html")
+            return render(request, "auth/register.html", {"existing_companies": existing_companies})
 
-    return render(request, "auth/register.html")
+    return render(request, "auth/register.html", {"existing_companies": existing_companies})
 
 
 # =========================
@@ -189,6 +206,8 @@ def login_view(request):
             return redirect('resend_verification')
 
         login(request, user)
+        if user.role == "user":
+            return redirect("sales")
         return redirect('dashboard')
 
     return render(request, "auth/login.html")

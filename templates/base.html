@@ -36,26 +36,27 @@
     <!-- NAV -->
     <nav class="flex-1 px-4 space-y-1">
 
-      <a href="{% url 'dashboard' %}"
-        class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium
-        {% if request.resolver_match.url_name == 'dashboard' %}
-          bg-slate-100 dark:bg-slate-700
-        {% else %}
-          hover:bg-slate-100 dark:hover:bg-slate-700
-        {% endif %}">
-        📊 Dashboard
-      </a>
+      {% if request.user.role != "user" %}
+        <a href="{% url 'dashboard' %}"
+          class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium
+          {% if request.resolver_match.url_name == 'dashboard' %}
+            bg-slate-100 dark:bg-slate-700
+          {% else %}
+            hover:bg-slate-100 dark:hover:bg-slate-700
+          {% endif %}">
+          📊 Dashboard
+        </a>
 
       <a href="{% url 'products' %}"
-        class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
-        {% if request.resolver_match.url_name == 'products' %}
-          bg-slate-100 dark:bg-slate-700
-        {% else %}
-          hover:bg-slate-100 dark:hover:bg-slate-700
-        {% endif %}">
-        📦 Products
-      </a>
-
+          class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
+          {% if request.resolver_match.url_name == 'products' %}
+            bg-slate-100 dark:bg-slate-700
+          {% else %}
+            hover:bg-slate-100 dark:hover:bg-slate-700
+          {% endif %}">
+          📦 Products
+        </a>
+      {% endif %}
       <a href="{% url 'sales' %}"
         class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
         {% if request.resolver_match.url_name == 'sales' %}
@@ -66,15 +67,17 @@
         💰 Sales
       </a>
 
-      <a href="{% url 'subscription' %}"
-        class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
-        {% if request.resolver_match.url_name == 'subscription' %}
-          bg-slate-100 dark:bg-slate-700
-        {% else %}
-          hover:bg-slate-100 dark:hover:bg-slate-700
-        {% endif %}">
-        💳 Subscription
-      </a>
+      {% if request.user.role != "user" %}
+        <a href="{% url 'subscription' %}"
+          class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
+          {% if request.resolver_match.url_name == 'subscription' %}
+            bg-slate-100 dark:bg-slate-700
+          {% else %}
+            hover:bg-slate-100 dark:hover:bg-slate-700
+          {% endif %}">
+          💳 Subscription
+        </a>
+      {% endif %}
 
     </nav>
 

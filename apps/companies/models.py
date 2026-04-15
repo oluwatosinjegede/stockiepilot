@@ -1,5 +1,6 @@
     
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class Company(models.Model):
@@ -22,6 +23,14 @@ class Company(models.Model):
     is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower("name"),
+                name="companies_company_name_ci_unique",
+            )
+        ]
 
     def __str__(self):
         return self.name

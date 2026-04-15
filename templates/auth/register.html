@@ -39,10 +39,20 @@
   <form method="POST" class="space-y-3">
     {% csrf_token %}
 
-    <!-- Company -->
-    <input name="company_name"
-           placeholder="Company Name"
-           required
+    <!-- Company Selection -->
+    <select name="existing_company_id"
+            id="existing_company_id"
+            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <option value="">Create New Company</option>
+      {% for company in existing_companies %}
+        <option value="{{ company.id }}">{{ company.name }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- New Company Name -->
+    <input name="new_company_name"
+           id="new_company_name"
+           placeholder="New Company Name"
            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
 
     <!-- Full Name -->
@@ -99,6 +109,23 @@
   </p>
 
 </div>
+
+<script>
+const companySelect = document.getElementById('existing_company_id');
+const newCompanyInput = document.getElementById('new_company_name');
+
+function toggleNewCompanyInput() {
+  const usingExistingCompany = !!companySelect.value;
+  newCompanyInput.disabled = usingExistingCompany;
+  newCompanyInput.required = !usingExistingCompany;
+  if (usingExistingCompany) {
+    newCompanyInput.value = '';
+  }
+}
+
+companySelect.addEventListener('change', toggleNewCompanyInput);
+toggleNewCompanyInput();
+</script>
 
 </body>
 </html>

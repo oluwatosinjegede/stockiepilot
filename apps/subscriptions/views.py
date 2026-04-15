@@ -29,9 +29,9 @@ def validate_plan(plan):
 @login_required
 def subscription_view(request):
 
-    if request.user.role != "staff":
-        messages.error(request, "Only staff can manage subscription.")
-        return redirect("dashboard")
+    if request.user.role == "user":
+        messages.error(request, "Company users can only access the Sales module.")
+        return redirect("sales")
     
     company = get_user_company(request.user)
 
@@ -56,6 +56,10 @@ def subscription_view(request):
 
 @login_required
 def subscribe(request, plan):
+    if request.user.role == "user":
+        messages.error(request, "Company users can only access the Sales module.")
+        return redirect("sales")
+    
     company = get_user_company(request.user)
 
     if not company:
@@ -106,6 +110,10 @@ def subscribe(request, plan):
 
 @login_required
 def payment_callback(request):
+    if request.user.role == "user":
+        messages.error(request, "Company users can only access the Sales module.")
+        return redirect("sales")
+    
     reference = request.GET.get("reference")
 
     if not reference:

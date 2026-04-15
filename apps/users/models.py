@@ -60,6 +60,8 @@ class User(AbstractUser):
     ROLE_CHOICES = (
         ("staff", "Staff"),
         ("user", "User"),
+        ("staff", "Company Admin"),
+        ("user", "Company User"),
     )
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="staff")
@@ -73,6 +75,10 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+    
+    @property
+    def is_company_admin(self):
+        return self.role == "staff"
     
 
 class EmailVerification(models.Model):
