@@ -197,6 +197,59 @@ def sales_view(request):
         "debt_sales": debt_sales,
     })
 
+@login_required
+def update_sale_payment(request, sale_id):
+    if request.method != "POST":
+        return redirect("sales")
+
+    company = getattr(request.user, "company", None)
+
+    if not company:
+        messages.error(request, "User is not assigned to a company.")
+        return redirect("dashboard")
+
+    sale = get_object_or_404(Sale, id=sale_id, company=company)
+
+    if sale.balance <= 0:
+        messages.info(request, "This sale has already been fully settled.")
+        return redirect("sales")
+
+    amount_raw = request.POST.get("payment_amount")
+
+    try:
+        payment_amount = Decimal(amount_raw or "0")
+    except (InvalidOperation, TypeError):
+        messages.error(request, "Enter a valid payment amount.")
+        return redirect("sales")
+
+    if payment_amount <= 0:
+        messages.error(request, "Payment amount must be greater than zero.")
+        return redirect("sales")
+
+    with transaction.atomic():
+        locked_sale = Sale.objects.select_for_update().get(id=sale.id)
+
+        if payment_amount > locked_sale.balance:
+            messages.error(
+                request,
+                f"Payment cannot exceed outstanding balance of ₦{locked_sale.balance}.",
+            )
+            return redirect("sales")
+
+        locked_sale.amount_paid += payment_amount
+        locked_sale.balance -= payment_amount
+        locked_sale.status = "completed" if locked_sale.balance == 0 else "pending"
+        locked_sale.payment_status = "paid" if locked_sale.balance == 0 else "partial"
+        locked_sale.save(update_fields=["amount_paid", "balance", "status", "payment_status"])
+        remaining_balance = locked_sale.balance
+
+    if remaining_balance == 0:
+        messages.success(request, "Payment received and sale marked as completed.")
+    else:
+        messages.success(request, "Payment received and pending sale updated.")
+
+    return redirect("sales")
+
 
 # =========================
 # SALES LIST

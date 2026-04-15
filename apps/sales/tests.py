@@ -77,3 +77,74 @@ class CreateSaleTests(TestCase):
 # Create your tests here.
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Sale.objects.count(), 0)
+
+def test_updates_pending_sale_with_additional_payment(self):
+        sale = Sale.objects.create(
+            company=self.company,
+            total_amount=Decimal("500.00"),
+            payment_status="partial",
+            customer_name="Olaseni",
+            amount_paid=Decimal("200.00"),
+            balance=Decimal("300.00"),
+            status="pending",
+        )
+
+        response = self.client.post(
+            reverse("update_sale_payment", kwargs={"sale_id": sale.id}),
+            {"payment_amount": "150.00"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        sale.refresh_from_db()
+        self.assertEqual(sale.amount_paid, Decimal("350.00"))
+        self.assertEqual(sale.balance, Decimal("150.00"))
+        self.assertEqual(sale.status, "pending")
+        self.assertEqual(sale.payment_status, "partial")
+
+    def test_marks_pending_sale_completed_when_fully_paid(self):
+        sale = Sale.objects.create(
+            company=self.company,
+            total_amount=Decimal("500.00"),
+            payment_status="partial",
+            customer_name="Olaseni",
+            amount_paid=Decimal("400.00"),
+            balance=Decimal("100.00"),
+            status="pending",
+        )
+
+        response = self.client.post(
+            reverse("update_sale_payment", kwargs={"sale_id": sale.id}),
+            {"payment_amount": "100.00"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        sale.refresh_from_db()
+        self.assertEqual(sale.amount_paid, Decimal("500.00"))
+        self.assertEqual(sale.balance, Decimal("0.00"))
+        self.assertEqual(sale.status, "completed")
+        self.assertEqual(sale.payment_status, "paid")
+
+    def test_rejects_payment_greater_than_balance(self):
+        sale = Sale.objects.create(
+            company=self.company,
+            total_amount=Decimal("500.00"),
+            payment_status="partial",
+            customer_name="Olaseni",
+            amount_paid=Decimal("400.00"),
+            balance=Decimal("100.00"),
+            status="pending",
+        )
+
+        response = self.client.post(
+            reverse("update_sale_payment", kwargs={"sale_id": sale.id}),
+            {"payment_amount": "120.00"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        sale.refresh_from_db()
+        self.assertEqual(sale.amount_paid, Decimal("400.00"))
+        self.assertEqual(sale.balance, Decimal("100.00"))
+        self.assertEqual(sale.status, "pending")

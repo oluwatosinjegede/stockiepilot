@@ -52,11 +52,35 @@
 
   <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
     <h3 class="font-semibold mb-2">⚠️ Customers in Debit</h3>
-    <ul class="space-y-1 text-sm text-amber-800 dark:text-amber-200">
+    <ul class="space-y-3 text-sm text-amber-800 dark:text-amber-200">
       {% for debt_sale in debt_sales %}
-      <li>
-        {{ debt_sale.customer_name }} — Paid: ₦{{ debt_sale.amount_paid|floatformat:2 }} |
-        Balance: ₦{{ debt_sale.balance|floatformat:2 }} ({{ debt_sale.created_at|date:"M d, Y H:i" }})
+      <li class="rounded-lg border border-amber-200/80 dark:border-amber-700/70 p-3 bg-white/60 dark:bg-slate-800/40">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <p>
+            {{ debt_sale.customer_name|default:"Walk-in Customer" }} — Paid: ₦{{ debt_sale.amount_paid|floatformat:2 }} |
+            Balance: ₦{{ debt_sale.balance|floatformat:2 }} ({{ debt_sale.created_at|date:"M d, Y H:i" }})
+          </p>
+
+          <form method="post" action="{% url 'update_sale_payment' debt_sale.id %}" class="flex items-center gap-2">
+            {% csrf_token %}
+            <input
+              type="number"
+              name="payment_amount"
+              step="0.01"
+              min="0.01"
+              max="{{ debt_sale.balance }}"
+              placeholder="Add payment"
+              required
+              class="w-32 rounded-md border border-amber-300 px-2 py-1 text-sm text-slate-700"
+            >
+            <button
+              type="submit"
+              class="rounded-md bg-amber-500 px-3 py-1.5 text-white hover:bg-amber-600"
+            >
+              Update
+            </button>
+          </form>
+        </div>
       </li>
       {% empty %}
       <li>No customers in debit 🎉</li>
