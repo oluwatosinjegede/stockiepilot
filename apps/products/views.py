@@ -234,7 +234,7 @@ def _build_product_analytics(products):
             low_stock_count += 1
             alerts.append(f"{p.name} is low in stock")
             if qty == 0:
-            out_of_stock_count += 1
+                out_of_stock_count += 1
 
     if total_products:
         avg_stock_per_product = total_stock_units / total_products
