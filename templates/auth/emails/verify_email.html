@@ -1,0 +1,5 @@
+<p>Hello {{ user.full_name|default:user.email }},</p>
+<p>Thanks for signing up for <strong>StockiePilot</strong>.</p>
+<p>Please verify your email by clicking the link below:</p>
+<p><a href="{{ verification_link }}">Verify Email</a></p>
+<p>If you did not create this account, you can ignore this email.</p>

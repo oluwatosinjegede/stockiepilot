@@ -1,14 +1,63 @@
-# apps/users/services.py
+from urllib.parse import urljoin
 
-from django.core.mail import send_mail
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.urls import reverse
 
-def send_verification_email(user, token):
-    verification_link = f"https://stockiepilot.up.railway.app{reverse('verify_email', args=[token])}"
+def _resolve_base_url(request=None):
+    if request is not None:
+        return request.build_absolute_uri('/')
+    return getattr(settings, 'BASE_URL', '').strip() or 'http://localhost:8000/'
 
-    send_mail(
-        subject="Verify your StockiePilot account",
-        message=f"Click the link to verify your account:\n{verification_link}",
-        from_email="noreply@stockiepilot.com",
-        recipient_list=[user.email],
+
+def _build_absolute_url(path, request=None):
+    return urljoin(_resolve_base_url(request), path)
+
+
+def _send_email(subject, recipient_email, text_body, html_body=None):
+    message = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[recipient_email],
+    )
+    if html_body:
+        message.attach_alternative(html_body, 'text/html')
+    message.send(fail_silently=False)
+
+
+def send_verification_email(user, token, request=None):
+    verification_link = _build_absolute_url(reverse('verify_email', args=[token]), request=request)
+
+    context = {
+        'user': user,
+        'verification_link': verification_link,
+    }
+    text_body = render_to_string('auth/emails/verify_email.txt', context)
+    html_body = render_to_string('auth/emails/verify_email.html', context)
+
+    _send_email(
+        subject='Verify your StockiePilot account',
+        recipient_email=user.email,
+        text_body=text_body,
+        html_body=html_body,
+    )
+
+
+def send_password_reset_email(user, uid, token, request=None):
+    reset_link = _build_absolute_url(reverse('reset_password', args=[uid, token]), request=request)
+
+    context = {
+        'user': user,
+        'reset_link': reset_link,
+    }
+    text_body = render_to_string('auth/emails/reset_password.txt', context)
+    html_body = render_to_string('auth/emails/reset_password.html', context)
+
+    _send_email(
+        subject='Reset your StockiePilot password',
+        recipient_email=user.email,
+        text_body=text_body,
+        html_body=html_body,
     )

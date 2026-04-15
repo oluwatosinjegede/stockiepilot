@@ -2,13 +2,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 from django.contrib.auth import login, logout, authenticate, get_user_model
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.decorators import login_required
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
 from apps.companies.models import Company
 from apps.subscriptions.services import create_initial_subscription
 from apps.billing.services import create_signup_invoice
 from apps.users.models import EmailVerification
-from apps.users.services import send_verification_email
+from apps.users.services import send_verification_email, send_password_reset_email
 
 User = get_user_model()
 
@@ -87,7 +90,7 @@ def register_view(request):
             # =========================
             try:
                 verification = EmailVerification.objects.create(user=user)
-                send_verification_email(user, verification.token)
+                send_verification_email(user, verification.token, request=request)
             except Exception as e:
                 # DO NOT break registration because of email
                 print("EMAIL ERROR:", str(e))
@@ -151,7 +154,7 @@ def resend_verification(request):
 
         try:
             verification = EmailVerification.objects.create(user=user)
-            send_verification_email(user, verification.token)
+            send_verification_email(user, verification.token, request=request)
             messages.success(request, "Verification email resent successfully")
 
         except Exception as e:
@@ -189,6 +192,81 @@ def login_view(request):
         return redirect('dashboard')
 
     return render(request, "auth/login.html")
+
+# =========================
+# FORGOT PASSWORD
+# =========================
+def forgot_password_view(request):
+
+    if request.method == "POST":
+
+        email = request.POST.get("email", "").strip().lower()
+
+        if not email:
+            messages.error(request, "Email is required")
+            return render(request, "auth/forgot_password.html")
+
+        user = User.objects.filter(email=email).first()
+
+        if user:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            try:
+                send_password_reset_email(user, uid, token, request=request)
+            except Exception as e:
+                print("PASSWORD RESET EMAIL ERROR:", str(e))
+
+        messages.success(
+            request,
+            "If that email is registered, a password reset link has been sent."
+        )
+        return redirect("forgot_password")
+
+    return render(request, "auth/forgot_password.html")
+
+
+# =========================
+# RESET PASSWORD
+# =========================
+def reset_password_view(request, uidb64, token):
+
+    user = None
+
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is None or not default_token_generator.check_token(user, token):
+        messages.error(request, "Invalid or expired password reset link")
+        return redirect("forgot_password")
+
+    if request.method == "POST":
+
+        password = request.POST.get("password")
+        confirm_password = request.POST.get("confirm_password")
+
+        if not password or not confirm_password:
+            messages.error(request, "All fields are required")
+            return render(request, "auth/reset_password.html", {"uidb64": uidb64, "token": token})
+
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match")
+            return render(request, "auth/reset_password.html", {"uidb64": uidb64, "token": token})
+
+        if len(password) < 6:
+            messages.error(request, "Password must be at least 6 characters")
+            return render(request, "auth/reset_password.html", {"uidb64": uidb64, "token": token})
+
+        user.set_password(password)
+        user.save(update_fields=["password"])
+
+        messages.success(request, "Password reset successful. Please login.")
+        return redirect("login")
+
+    return render(request, "auth/reset_password.html", {"uidb64": uidb64, "token": token})
 
 
 # =========================
