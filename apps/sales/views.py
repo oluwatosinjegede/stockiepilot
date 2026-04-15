@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -11,7 +11,7 @@ from .services.analytics import build_sales_analytics
 
 
 # =========================
-# CREATE SALE
+# CREATE SALE (POS READY)
 # =========================
 @login_required
 def create_sale(request):
@@ -24,40 +24,57 @@ def create_sale(request):
 
     if request.method == "POST":
 
-        product_id = request.POST.get("product")
-        quantity = request.POST.get("quantity")
+        product_ids = request.POST.getlist("product[]") or [request.POST.get("product")]
+        quantities = request.POST.getlist("quantity[]") or [request.POST.get("quantity")]
+
         payment_status = request.POST.get("payment_status", "paid")
         customer_name = (request.POST.get("customer_name") or "").strip()
         amount_paid_raw = request.POST.get("amount_paid")
 
         # ================= VALIDATION =================
-        if not product_id or not quantity:
-            messages.error(request, "All fields are required.")
+        if not product_ids or not quantities:
+            messages.error(request, "No products selected.")
             return redirect("create_sale")
 
-        try:
-            quantity = int(quantity)
-            if quantity <= 0:
-                raise ValueError
-        except:
-            messages.error(request, "Invalid quantity.")
-            return redirect("create_sale")
-
-        product = get_object_or_404(Product, id=product_id, company=company)
-
-        if quantity > product.quantity:
-            messages.error(request, "Not enough stock.")
-            return redirect("create_sale")
-
-        sale_total = Decimal(product.selling_price) * quantity
-
-        # ================= PAYMENT =================
         if payment_status not in ["paid", "partial"]:
             messages.error(request, "Invalid payment option.")
             return redirect("create_sale")
 
+        total_sale_amount = Decimal("0")
+        items = []
+
+        # ================= PROCESS ITEMS =================
+        for i in range(len(product_ids)):
+
+            try:
+                product = get_object_or_404(Product, id=product_ids[i], company=company)
+                qty = int(quantities[i])
+
+                if qty <= 0:
+                    raise ValueError
+
+            except (ValueError, TypeError):
+                messages.error(request, "Invalid product or quantity.")
+                return redirect("create_sale")
+
+            if qty > product.quantity:
+                messages.error(request, f"Not enough stock for {product.name}")
+                return redirect("create_sale")
+
+            item_total = Decimal(product.selling_price) * qty
+
+            items.append({
+                "product": product,
+                "quantity": qty,
+                "unit_price": product.selling_price,
+                "total": item_total
+            })
+
+            total_sale_amount += item_total
+
+        # ================= PAYMENT =================
         if payment_status == "paid":
-            amount_paid = sale_total
+            amount_paid = total_sale_amount
             balance = Decimal("0")
 
         else:
@@ -67,15 +84,15 @@ def create_sale(request):
 
             try:
                 amount_paid = Decimal(amount_paid_raw or "0")
-            except:
+            except (InvalidOperation, TypeError):
                 messages.error(request, "Invalid amount.")
                 return redirect("create_sale")
 
-            if amount_paid <= 0 or amount_paid >= sale_total:
+            if amount_paid <= 0 or amount_paid >= total_sale_amount:
                 messages.error(request, "Invalid part payment.")
                 return redirect("create_sale")
 
-            balance = sale_total - amount_paid
+            balance = total_sale_amount - amount_paid
 
         # ================= SAVE =================
         try:
@@ -90,15 +107,16 @@ def create_sale(request):
                     status="pending" if balance > 0 else "completed",
                 )
 
-                SaleItem.objects.create(
-                    sale=sale,
-                    product=product,
-                    quantity=quantity,
-                    unit_price=product.selling_price,
-                )
+                for item in items:
+                    SaleItem.objects.create(
+                        sale=sale,
+                        product=item["product"],
+                        quantity=item["quantity"],
+                        unit_price=item["unit_price"],
+                    )
 
         except Exception as e:
-            messages.error(request, str(e))
+            messages.error(request, f"Error creating sale: {str(e)}")
             return redirect("create_sale")
 
         # ================= FEEDBACK =================
@@ -128,7 +146,6 @@ def sales_view(request):
         messages.error(request, "User is not assigned to a company.")
         return redirect("dashboard")
 
-    #  CORRECT QUERY
     sales = (
         Sale.objects
         .filter(company=company)
@@ -136,10 +153,16 @@ def sales_view(request):
         .order_by("-created_at")
     )
 
-    #  ANALYTICS
-    analytics = build_sales_analytics(sales)
+    # ================= SAFE ANALYTICS =================
+    try:
+        analytics = build_sales_analytics(sales)
+    except Exception:
+        analytics = {
+            "metrics": {},
+            "charts": {},
+            "insights": []
+        }
 
-    #  DEBT SALES
     debt_sales = sales.filter(balance__gt=0)
 
     return render(request, "sales.html", {
@@ -152,7 +175,7 @@ def sales_view(request):
 
 
 # =========================
-# SALES LIST (OPTIONAL VIEW)
+# SALES LIST
 # =========================
 @login_required
 def sales_list(request):
