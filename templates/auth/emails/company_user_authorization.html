@@ -1,0 +1,10 @@
+<p>Hello {{ company.name }} team,</p>
+<p>A new user has requested access to your company account on <strong>StockiePilot</strong>.</p>
+<p><strong>Requested user details:</strong></p>
+<ul>
+  <li>Username: {{ user.username|default:user.email }}</li>
+  <li>Email: {{ user.email }}</li>
+</ul>
+<p><a href="{{ approve_link }}">Approve access</a></p>
+<p><a href="{{ reject_link }}">Reject access</a></p>
+<p>If you do nothing, this user will remain inactive and cannot access any module.</p>

@@ -61,3 +61,31 @@ def send_password_reset_email(user, uid, token, request=None):
         text_body=text_body,
         html_body=html_body,
     )
+
+
+def send_company_authorization_email(approval_request, request=None):
+    approve_link = _build_absolute_url(
+        reverse("approve_company_user", args=[approval_request.token]),
+        request=request,
+    )
+    reject_link = _build_absolute_url(
+        reverse("reject_company_user", args=[approval_request.token]),
+        request=request,
+    )
+
+    context = {
+        "approval_request": approval_request,
+        "user": approval_request.user,
+        "company": approval_request.company,
+        "approve_link": approve_link,
+        "reject_link": reject_link,
+    }
+    text_body = render_to_string("auth/emails/company_user_authorization.txt", context)
+    html_body = render_to_string("auth/emails/company_user_authorization.html", context)
+
+    _send_email(
+        subject=f"Approval required: {approval_request.user.email} requested access to {approval_request.company.name}",
+        recipient_email=approval_request.company.email,
+        text_body=text_body,
+        html_body=html_body,
+    )

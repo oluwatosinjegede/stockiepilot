@@ -1,0 +1,15 @@
+Hello {{ company.name }} team,
+
+A new user has requested access to your company account on StockiePilot.
+
+Requested user details:
+- Username: {{ user.username|default:user.email }}
+- Email: {{ user.email }}
+
+Approve access:
+{{ approve_link }}
+
+Reject access:
+{{ reject_link }}
+
+If you do nothing, this user will remain inactive and cannot access any module.

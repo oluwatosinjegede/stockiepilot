@@ -57,6 +57,18 @@ class User(AbstractUser):
 
     is_email_verified = models.BooleanField(default=False)
 
+    ONBOARDING_STATUS_CHOICES = (
+        ("pending_email_verification", "Pending Email Verification"),
+        ("pending_approval", "Pending Company Approval"),
+        ("active", "Active"),
+        ("rejected", "Rejected"),
+    )
+    onboarding_status = models.CharField(
+        max_length=40,
+        choices=ONBOARDING_STATUS_CHOICES,
+        default="pending_email_verification",
+    )
+
     ROLE_CHOICES = (
         ("staff", "Staff"),
         ("user", "User"),
@@ -91,3 +103,21 @@ class EmailVerification(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.token}"
+
+
+class CompanyUserApproval(models.Model):
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    )
+
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="approval_requests")
+    company = models.ForeignKey("companies.Company", on_delete=models.CASCADE, related_name="approval_requests")
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.email} -> {self.company.name} ({self.status})"
