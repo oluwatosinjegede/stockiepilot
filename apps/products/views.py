@@ -36,6 +36,9 @@ def products_view(request):
 
         if action == "create_category":
             return _create_category(request)
+        
+        if action == "add_stock":
+            return _add_stock(request, company)
 
         return _create_product(request, company)
 
@@ -101,8 +104,28 @@ def _create_product(request, company):
 
     category = Category.objects.filter(id=category_id).first() if category_id else None
 
-    if Product.objects.filter(company=company, name__iexact=name).exists():
-        messages.error(request, "Product already exists.")
+    existing_product = Product.objects.filter(company=company, name__iexact=name).first()
+    if existing_product:
+        existing_product.quantity = (existing_product.quantity or 0) + quantity
+        existing_product.selling_price = price
+        existing_product.cost_price = cost_price
+        if category:
+            existing_product.category = category
+        if description:
+            existing_product.description = description
+        existing_product.save(
+            update_fields=[
+                "quantity",
+                "selling_price",
+                "cost_price",
+                "category",
+                "description",
+            ]
+        )
+        messages.success(
+            request,
+            f"Added {quantity} unit(s) to {existing_product.name}. Current stock: {existing_product.quantity}.",
+        )
         return redirect("products")
 
     # SKU
@@ -129,6 +152,35 @@ def _create_product(request, company):
     messages.success(request, "Product created.")
     return redirect("products")
 
+def _add_stock(request, company):
+    product_id = request.POST.get("product_id")
+    quantity_input = request.POST.get("stock_quantity", "").strip()
+
+    if not product_id:
+        messages.error(request, "Product is required.")
+        return redirect("products")
+
+    try:
+        quantity_to_add = int(quantity_input)
+        if quantity_to_add <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        messages.error(request, "Enter a valid stock quantity greater than 0.")
+        return redirect("products")
+
+    product = Product.objects.filter(id=product_id, company=company).first()
+    if not product:
+        messages.error(request, "Product not found.")
+        return redirect("products")
+
+    product.quantity = (product.quantity or 0) + quantity_to_add
+    product.save(update_fields=["quantity"])
+
+    messages.success(
+        request,
+        f"Added {quantity_to_add} unit(s) to {product.name}. Current stock: {product.quantity}.",
+    )
+    return redirect("products")
 
 # =========================
 # CATEGORY
@@ -205,7 +257,20 @@ def edit_product(request, product_id):
     if request.method == "POST":
 
         try:
-            product.name = request.POST.get("name")
+            name = request.POST.get("name", "").strip()
+            if not name:
+                raise ValueError("name_required")
+
+            duplicate_exists = Product.objects.filter(
+                company=company,
+                name__iexact=name
+            ).exclude(id=product.id).exists()
+
+            if duplicate_exists:
+                messages.error(request, "A product with this name already exists.")
+                return redirect("edit_product", product_id=product.id)
+
+            product.name = name
             product.selling_price = Decimal(request.POST.get("price"))
             product.quantity = int(request.POST.get("quantity"))
             product.cost_price = Decimal(request.POST.get("cost_price"))

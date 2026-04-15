@@ -8,16 +8,16 @@
   <form method="POST">
     {% csrf_token %}
 
-    <input name="name" value="{{ product.name }}"
+    <input name="name" value="{{ product.name }}" required
            class="w-full p-2 border mb-3">
 
-    <input name="price" value="{{ product.selling_price }}"
+    <input name="price" type="number" step="0.01" min="0" value="{{ product.selling_price }}" required
            class="w-full p-2 border mb-3">
 
-    <input name="quantity" value="{{ product.quantity }}"
+    <input name="quantity" type="number" min="0" value="{{ product.quantity }}" required
            class="w-full p-2 border mb-3">
 
-    <input name="cost_price" value="{{ product.cost_price }}"
+    <input name="cost_price" type="number" step="0.01" min="0" value="{{ product.cost_price }}" required
            class="w-full p-2 border mb-3">
 
     <button class="bg-indigo-600 text-white px-4 py-2 rounded">
