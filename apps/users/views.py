@@ -7,7 +7,6 @@ from django.contrib.auth.decorators import login_required
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils import timezone
-from django.http import HttpResponse
 
 from apps.companies.models import Company
 from apps.subscriptions.services import create_initial_subscription
@@ -445,7 +444,3 @@ def create_user_view(request):
         messages.success(request, "User created successfully.")
         return redirect("dashboard")
     
-
-
-def approve_company_user(request, token):
-    return HttpResponse("User approved successfully")
