@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page_title|default:"StockiePilot" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .hero-gradient {
+      background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.35), transparent 40%),
+                  radial-gradient(circle at top left, rgba(14, 165, 233, 0.25), transparent 35%),
+                  linear-gradient(160deg, #020617, #0f172a 45%, #111827);
+    }
+  </style>
+</head>
+<body class="min-h-full bg-slate-950 text-slate-100">
+  <header class="sticky top-0 z-40 bg-slate-950/75 backdrop-blur border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="{% url 'home' %}" class="text-xl font-bold tracking-tight">StockiePilot</a>
+      <nav class="hidden md:flex items-center gap-6 text-sm text-slate-300">
+        <a href="{% url 'readme_page' %}" class="hover:text-white">Readme</a>
+        <a href="{% url 'privacy_policy_page' %}" class="hover:text-white">Privacy</a>
+        <a href="{% url 'terms_of_service_page' %}" class="hover:text-white">Terms</a>
+        <a href="{% url 'data_protection_page' %}" class="hover:text-white">Data Protection</a>
+        <a href="{% url 'fraud_warning_page' %}" class="hover:text-white">Fraud Warning</a>
+      </nav>
+      <div class="flex gap-3">
+        <a href="{% url 'login' %}" class="px-4 py-2 rounded-lg border border-slate-700 text-sm hover:border-slate-500">Login</a>
+        <a href="{% url 'register' %}" class="px-4 py-2 rounded-lg bg-indigo-500 text-sm font-semibold hover:bg-indigo-400">Get Started</a>
+      </div>
+    </div>
+  </header>
+
+  {% block content %}{% endblock %}
+
+  <footer class="border-t border-slate-800 mt-16">
+    <div class="max-w-7xl mx-auto px-6 py-10 text-sm text-slate-400 flex flex-col md:flex-row md:justify-between gap-4">
+      <p>© {% now "Y" %} StockiePilot. Built for secure inventory operations.</p>
+      <div class="flex flex-wrap gap-4">
+        <a href="{% url 'readme_page' %}" class="hover:text-white">Readme</a>
+        <a href="{% url 'privacy_policy_page' %}" class="hover:text-white">Privacy Policy</a>
+        <a href="{% url 'terms_of_service_page' %}" class="hover:text-white">Terms of Service</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

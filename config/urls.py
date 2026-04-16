@@ -2,8 +2,14 @@ from django.contrib import admin
 from django.urls import path, include
 
 from apps.dashboard.views import dashboard
-from apps.subscriptions.views import subscription_view
-from core.views import home
+from core.views import (
+    home,
+    readme_page,
+    privacy_policy_page,
+    terms_of_service_page,
+    data_protection_page,
+    fraud_warning_page,
+)
 
 
 urlpatterns = [
@@ -17,11 +23,17 @@ urlpatterns = [
     path('sales/', include('apps.sales.urls')),
 
     # Other pages
-    #path('subscription/', subscription_view, name='subscription'),
     path('subscription/', include('apps.subscriptions.urls')),
 
     # Core pages
     path('', home, name='home'),
     path('dashboard/', dashboard, name='dashboard'),
-    
+
+    # Public/legal pages
+    path('readme/', readme_page, name='readme_page'),
+    path('privacy-policy/', privacy_policy_page, name='privacy_policy_page'),
+    path('terms-of-service/', terms_of_service_page, name='terms_of_service_page'),
+    path('data-protection/', data_protection_page, name='data_protection_page'),
+    path('fraud-warning/', fraud_warning_page, name='fraud_warning_page'),
 ]
+    

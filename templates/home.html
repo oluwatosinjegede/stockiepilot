@@ -1,34 +1,85 @@
-{% extends "base.html" %}
+{% extends "public_base.html" %}
 
 {% block content %}
+<section class="hero-gradient">
+  <div class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <p class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold uppercase tracking-widest text-indigo-200 mb-6">Realtime Stock + Sales Command Center</p>
+        <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">A smarter way to run inventory, billing, and team workflows.</h1>
+        <p class="mt-6 text-slate-300 text-lg max-w-xl">StockiePilot helps retailers and operations teams track every product movement, close sales faster, and reduce stockout risk using live insights.</p>
 
-<div class="max-w-4xl mx-auto text-center py-20">
+        <div class="mt-8 flex flex-wrap gap-4">
+          <a href="{% url 'register' %}" class="px-6 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold">Start Free Trial</a>
+          <a href="{% url 'login' %}" class="px-6 py-3 rounded-xl border border-slate-600 hover:border-slate-400 font-semibold">Sign In</a>
+        </div>
 
-  <!-- TITLE -->
-  <h1 class="text-4xl md:text-5xl font-bold mb-4">
-    Welcome to StockiePilot
-  </h1>
+  <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {% for metric in trust_metrics %}
+            <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <p class="text-2xl font-bold">{{ metric.value }}</p>
+              <p class="text-xs text-slate-300 mt-1">{{ metric.label }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
 
-  <!-- SUBTEXT -->
-  <p class="text-slate-500 dark:text-slate-400 text-lg mb-8">
-    Smart Inventory & Sales Management for modern businesses
-  </p>
+  <div class="rounded-3xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-indigo-950/50">
+        <h2 class="text-xl font-semibold">New here? Download the mobile app.</h2>
+        <p class="text-sm text-slate-300 mt-2">We refactored onboarding so first-time visitors can install StockiePilot instantly and continue setup on mobile.</p>
 
-  <!-- ACTION BUTTONS -->
-  <div class="flex justify-center gap-4 flex-wrap">
+  <div id="downloadCards" class="mt-6 space-y-3">
+          {% for key, app in app_download_links.items %}
+            <a data-platform="{{ key }}" href="{{ app.url }}" target="_blank" rel="noopener"
+              class="flex items-center justify-between rounded-xl border border-slate-700 hover:border-indigo-400 bg-slate-950 px-4 py-4 transition">
+              <div class="flex items-center gap-3">
+                <span class="text-xl">{{ app.icon }}</span>
+                <div>
+                  <p class="font-semibold">{{ app.label }}</p>
+                  <p class="text-xs text-slate-400">Secure install from official store</p>
+                </div>
+              </div>
+              <span class="text-indigo-300 text-sm">Download →</span>
+            </a>
+          {% endfor %}
+        </div>
 
-    <a href="{% url 'dashboard' %}"
-       class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition">
-      Go to Dashboard
-    </a>
+    <p id="platformHint" class="mt-4 text-xs text-emerald-300 hidden">Recommended download highlighted for your device.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <a href="{% url 'login' %}"
-       class="border border-slate-300 dark:border-slate-600 px-6 py-3 rounded-lg font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-      Login
-    </a>
+<section class="max-w-7xl mx-auto px-6 py-16">
+  <h2 class="text-3xl font-bold">Why teams switch to StockiePilot</h2>
+  <div class="grid md:grid-cols-3 gap-6 mt-8">
+    <article class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <h3 class="font-semibold text-lg">Unified Inventory</h3>
+      <p class="text-slate-300 text-sm mt-2">Track multi-location stock with low-stock alerts and batch-level visibility.</p>
+    </article>
+    <article class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <h3 class="font-semibold text-lg">Fast Checkout</h3>
+      <p class="text-slate-300 text-sm mt-2">Close sales in seconds with mobile-ready checkout and payment reconciliation.</p>
+    </article>
+    <article class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <h3 class="font-semibold text-lg">Live Analytics</h3>
+      <p class="text-slate-300 text-sm mt-2">Get SKU velocity, margin health, and team performance dashboards in real time.</p>
+    </article>
 
   </div>
+</section>
 
-</div>
+<script>
+  const ua = navigator.userAgent || "";
+  const preferred = /iPhone|iPad|iPod/i.test(ua) ? "ios" : (/Android/i.test(ua) ? "android" : null);
 
+if (preferred) {
+    const preferredLink = document.querySelector(`[data-platform="${preferred}"]`);
+    if (preferredLink) {
+      preferredLink.classList.remove("border-slate-700");
+      preferredLink.classList.add("border-emerald-400", "ring-1", "ring-emerald-500/30");
+      document.getElementById("platformHint")?.classList.remove("hidden");
+    }
+  }
+</script>
 {% endblock %}
