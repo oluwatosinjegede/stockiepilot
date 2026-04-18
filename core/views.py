@@ -1,3 +1,7 @@
+from pathlib import Path
+
+from django.conf import settings
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 
 APP_DOWNLOAD_LINKS = {
@@ -39,6 +43,45 @@ def home(request):
             ],
         ),
     )
+
+def manifest_view(request):
+    manifest = {
+        "name": "StockiePilot POS",
+        "short_name": "StockiePilot",
+        "description": "POS and inventory app for fast checkout on mobile and desktop.",
+        "start_url": "/sales/create/",
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "any",
+        "background_color": "#0f172a",
+        "theme_color": "#1d4ed8",
+        "icons": [
+            {
+                "src": "/static/pwa/icon.svg",
+                "sizes": "any",
+                "type": "image/svg+xml",
+                "purpose": "any maskable",
+            }
+        ],
+        "shortcuts": [
+            {
+                "name": "New sale",
+                "short_name": "Checkout",
+                "url": "/sales/create/",
+            }
+        ],
+    }
+    return JsonResponse(manifest)
+
+
+def service_worker_view(request):
+    sw_path = Path(settings.BASE_DIR) / "static" / "sw.js"
+    content = sw_path.read_text(encoding="utf-8")
+
+    response = HttpResponse(content, content_type="application/javascript")
+    response["Service-Worker-Allowed"] = "/"
+    return response
+
 
 
 def readme_page(request):

@@ -4,6 +4,8 @@ from django.urls import path, include
 from apps.dashboard.views import dashboard
 from core.views import (
     home,
+    manifest_view,
+    service_worker_view,
     readme_page,
     privacy_policy_page,
     terms_of_service_page,
@@ -25,6 +27,10 @@ urlpatterns = [
     # Other pages
     path('subscription/', include('apps.subscriptions.urls')),
 
+    # PWA routes
+    path('manifest.webmanifest', manifest_view, name='manifest'),
+    path('sw.js', service_worker_view, name='service_worker'),
+
     # Core pages
     path('', home, name='home'),
     path('dashboard/', dashboard, name='dashboard'),
@@ -36,4 +42,3 @@ urlpatterns = [
     path('data-protection/', data_protection_page, name='data_protection_page'),
     path('fraud-warning/', fraud_warning_page, name='fraud_warning_page'),
 ]
-    

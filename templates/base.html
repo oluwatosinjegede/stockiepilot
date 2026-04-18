@@ -5,6 +5,13 @@
   <meta charset="UTF-8">
   <title>{{ page_title|default:"StockiePilot" }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1d4ed8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="StockiePilot">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="icon" type="image/svg+xml" href="{% static 'pwa/icon.svg' %}">
+  <link rel="apple-touch-icon" href="{% static 'pwa/icon.svg' %}">
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -109,9 +116,10 @@
         </h1>
       </div>
 
-      <div class="flex items-center gap-4">
-
-        <!-- Dark mode -->
+      <div class="flex items-center gap-3">
+        <button id="install-app-btn" class="hidden px-3 py-1 rounded-md bg-blue-600 text-white text-sm font-medium">
+          ⬇ Install app
+        </button>
         <button onclick="toggleDarkMode()"
           class="px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-sm">
           🌙
@@ -124,6 +132,9 @@
       </div>
     </header>
 
+        <div id="install-app-help" class="px-6 py-2 text-xs text-slate-500 dark:text-slate-300 bg-blue-50/60 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+      Install StockiePilot on desktop or mobile for a full-screen POS experience.
+    </div>
     <!-- CONTENT -->
     <main class="flex-1 p-6">
       {% block content %}{% endblock %}
@@ -148,7 +159,15 @@ function toggleDarkMode(){
     document.documentElement.classList.contains('dark') ? 'dark' : 'light'
   )
 }
-</script>
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function (error) {
+      console.warn('Service worker registration failed:', error)
+    })
+  })
+}
+</script>
+<script src="{% static 'js/pwa-install.js' %}"></script>
 </body>
 </html>
