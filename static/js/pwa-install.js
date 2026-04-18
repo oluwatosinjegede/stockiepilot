@@ -1,36 +1,74 @@
 (function () {
-  let deferredPrompt = null;
-
+  
   const installBtn = document.getElementById("install-app-btn");
   const installHelp = document.getElementById("install-app-help");
 
-  if (!installBtn) return;
+  if (!installBtn) {
+    return;
+  }
+
+  let deferredPrompt = null;
+  const iosStoreUrl = installBtn.dataset.iosUrl || "https://apps.apple.com/";
+  const androidStoreUrl = installBtn.dataset.androidUrl || "https://play.google.com/store";
+
+  const ua = navigator.userAgent || "";
+  const isIos = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+  function setHelpMessage(message) {
+    if (installHelp) {
+      installHelp.textContent = message;
+    }
+  }
+
+  function showInstallButton(label) {
+    installBtn.classList.remove("hidden");
+    installBtn.textContent = label;
+  }
+
+  function openStoreFallback() {
+    const storeUrl = isIos ? iosStoreUrl : androidStoreUrl;
+    window.open(storeUrl, "_blank", "noopener");
+  }
+
+  if (isStandalone) {
+    installBtn.classList.add("hidden");
+    setHelpMessage("StockiePilot is already installed on this device.");
+    return;
+  }
+
+  showInstallButton("⬇ Install app");
+
+  if (isIos) {
+    setHelpMessage("On iPhone/iPad: tap Share, then choose 'Add to Home Screen' to install StockiePilot.");
+  } else if (isAndroid) {
+    setHelpMessage("On Android: tap install, or use browser menu > 'Install app' to add StockiePilot.");
+  } else {
+    setHelpMessage("Install StockiePilot for a full-screen POS experience. If prompt does not appear, use browser install menu.");
+  }
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredPrompt = event;
-    installBtn.classList.remove("hidden");
-    if (installHelp) {
-      installHelp.textContent = "Tap install to add StockiePilot on this device.";
-    }
+    showInstallButton("⬇ Install app");
+    setHelpMessage("Tap install to add StockiePilot on this device.");
   });
 
   installBtn.addEventListener("click", async () => {
     if (!deferredPrompt) {
-      if (installHelp) {
-        installHelp.textContent = "If install does not appear, open browser menu and choose 'Install app' or 'Add to Home Screen'.";
-      }
+      openStoreFallback();
+      setHelpMessage("No install prompt available in this browser. We opened the official app store link.");
       return;
     }
 
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
 
-    if (installHelp) {
-      installHelp.textContent =
-        outcome === "accepted"
-          ? "App installed. You can launch StockiePilot from your home screen or desktop app launcher."
-          : "Install was dismissed. You can install later from your browser menu.";
+    if (outcome === "accepted") {
+      setHelpMessage("App installed. Launch StockiePilot from your home screen or desktop app launcher.");
+    } else {
+      setHelpMessage("Install was dismissed. You can install later from your browser menu.");
     }
 
     deferredPrompt = null;
@@ -38,9 +76,7 @@
   });
 
   window.addEventListener("appinstalled", () => {
-    if (installHelp) {
-      installHelp.textContent = "StockiePilot is installed on this device.";
-    }
+    setHelpMessage("StockiePilot is installed on this device.");
     installBtn.classList.add("hidden");
   });
 })();

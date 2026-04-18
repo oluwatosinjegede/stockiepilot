@@ -96,20 +96,27 @@ document.addEventListener("DOMContentLoaded", function () {
   const partialPaymentFields = document.getElementById("partial-payment-fields");
   const amountPaidField = document.getElementById("amount_paid");
   const balanceField = document.getElementById("balance");
+  const posForm = document.getElementById("pos-form");
+
+  if (!productGrid || !cartList || !itemCount || !totalDisplay || !totalField || !hiddenInputs || !paymentStatusField) {
+    return;
+  }
 
   productGrid.addEventListener("click", function (event) {
     const tile = event.target.closest(".product-tile");
-    if (!tile) return;
+    if (!tile) {
+      return;
+    }
 
     const productId = tile.dataset.productId;
     const name = tile.dataset.productName;
     const price = parseFloat(tile.dataset.productPrice || "0");
     const stock = parseInt(tile.dataset.productStock || "0", 10);
 
-    const existing = cart.get(productId);
-    const nextQty = (existing?.quantity || 0) + 1;
+    const existingItem = cart.get(productId);
+    const nextQuantity = (existingItem?.quantity || 0) + 1;
 
-    if (nextQty > stock && stock > 0) {
+    if (stock > 0 && nextQuantity > stock) {
       alert(`Only ${stock} unit(s) of ${name} remaining.`);
       return;
     }
@@ -119,27 +126,31 @@ document.addEventListener("DOMContentLoaded", function () {
       name,
       price,
       stock,
-      quantity: nextQty,
+      quantity: nextQuantity,
     });
 
     renderCart();
-  })
+  });
 
     cartList.addEventListener("click", function (event) {
-    const actionBtn = event.target.closest("button[data-action]");
-    if (!actionBtn) return;
+    const actionButton = event.target.closest("button[data-action]");
+    if (!actionButton) {
+      return;
+    }
 
-    const { action, productId } = actionBtn.dataset;
+    const { action, productId } = actionButton.dataset;
     const item = cart.get(productId);
-    if (!item) return;
+    if (!item) {
+      return;
+    }
 
     if (action === "inc") {
-      if (item.quantity < item.stock || item.stock === 0) {
+      if (item.stock === 0 || item.quantity < item.stock) {
         item.quantity += 1;
       }
     }
 
-        if (action === "dec") {
+        } else if (action === "dec") {
       item.quantity -= 1;
       if (item.quantity <= 0) {
         cart.delete(productId);
@@ -147,35 +158,50 @@ document.addEventListener("DOMContentLoaded", function () {
 
     }
 
-    if (action === "remove") {
+    } else if (action === "remove") {
       cart.delete(productId);
     }
 
     renderCart();
   });
-    }
+  
 
-    productSearch.addEventListener("input", function () {
+  productSearch?.addEventListener("input", function () {
     const query = productSearch.value.toLowerCase().trim();
     document.querySelectorAll(".product-tile").forEach((tile) => {
-      const name = tile.dataset.productName.toLowerCase();
+      const name = (tile.dataset.productName || "").toLowerCase();
       tile.classList.toggle("hidden", !name.includes(query));
     });
   });
 
   paymentStatusField.addEventListener("change", togglePartialFields);
-  amountPaidField.addEventListener("input", calculateBalance);
+  amountPaidField?.addEventListener("input", calculateBalance);
+
+  posForm?.addEventListener("submit", function (event) {
+    if (!cart.size) {
+      event.preventDefault();
+      alert("Add at least one product to complete this sale.");
+      return;
+    }
+
+    if (paymentStatusField.value === "partial") {
+      const paid = parseFloat(amountPaidField?.value || "0") || 0;
+      const total = parseFloat(totalField.value || "0") || 0;
+      if (paid <= 0 || paid > total) {
+        event.preventDefault();
+        alert("For part payment, enter an amount greater than 0 and not more than the total.");
+      }
+    }
+  });
 
   function renderCart() {
     const items = Array.from(cart.values());
     cartEmpty.classList.toggle("hidden", items.length > 0);
-    cartList.innerHTML = "";
+    hiddenInputs.innerHTML = "";
 
     let total = 0;
     let count = 0;
-    hiddenInputs.innerHTML = "";
-    }
-
+    
     items.forEach((item) => {
       const lineTotal = item.price * item.quantity;
       total += lineTotal;
@@ -208,7 +234,7 @@ document.addEventListener("DOMContentLoaded", function () {
       );
     });
 
-    itemCount.textContent = count.toString();
+    itemCount.textContent = String(count);
     totalDisplay.textContent = total.toFixed(2);
     totalField.value = total.toFixed(2);
     calculateBalance();
@@ -216,7 +242,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function togglePartialFields() {
     const isPartial = paymentStatusField.value === "partial";
-    partialPaymentFields.classList.toggle("hidden", !isPartial);
+    partialPaymentFields?.classList.toggle("hidden", !isPartial);
     calculateBalance();
   }
 
@@ -224,12 +250,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const total = parseFloat(totalField.value || "0") || 0;
     const paid = parseFloat(amountPaidField?.value || "0") || 0;
     const balance = Math.max(total - paid, 0);
-    balanceField.textContent = balance.toFixed(2);
+    if (balanceField) {
+      balanceField.textContent = balance.toFixed(2);
+    }
   }
 
   togglePartialFields();
   renderCart();
-
 });
 </script>
 
