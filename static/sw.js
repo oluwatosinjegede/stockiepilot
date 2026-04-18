@@ -3,8 +3,8 @@ const APP_SHELL = [
   "/",
   "/sales/create/",
   "/manifest.webmanifest",
-  "/static/pwa/icons/icon-192.png",
-  "/static/pwa/icons/icon-512.png",
+  "/static/icons/icon-192.png",
+  "/static/icons/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
