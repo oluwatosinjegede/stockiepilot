@@ -1,82 +1,137 @@
 (function () {
-  
   const installBtn = document.getElementById("install-app-btn");
   const installHelp = document.getElementById("install-app-help");
 
-  if (!installBtn) {
-    return;
-  }
-
-  let deferredPrompt = null;
-  const iosStoreUrl = installBtn.dataset.iosUrl || "https://apps.apple.com/";
-  const androidStoreUrl = installBtn.dataset.androidUrl || "https://play.google.com/store";
+  if (!installBtn) return;
 
   const ua = navigator.userAgent || "";
   const isIos = /iPhone|iPad|iPod/i.test(ua);
   const isAndroid = /Android/i.test(ua);
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+
+  let deferredPrompt = null;
+
+  // =========================
+  // HELPERS
+  // =========================
   function setHelpMessage(message) {
-    if (installHelp) {
-      installHelp.textContent = message;
+    if (installHelp) installHelp.textContent = message;
+  }
+
+  function showInstallButton(label = "Install App", animate = true) {
+    installBtn.classList.remove("hidden");
+    installBtn.textContent = label;
+
+    if (animate && !localStorage.getItem("installPromptSeen")) {
+      installBtn.classList.add("animate-pulse");
     }
   }
 
-  function showInstallButton(label) {
-    installBtn.classList.remove("hidden");
-    installBtn.textContent = label;
-  }
-
-  function openStoreFallback() {
-    const storeUrl = isIos ? iosStoreUrl : androidStoreUrl;
-    window.open(storeUrl, "_blank", "noopener");
-  }
-
-  if (isStandalone) {
+  function hideInstallButton() {
     installBtn.classList.add("hidden");
+    installBtn.classList.remove("animate-pulse");
+  }
+
+  function stopAnimation() {
+    installBtn.classList.remove("animate-pulse");
+    localStorage.setItem("installPromptSeen", "true");
+  }
+
+  // =========================
+  // ALREADY INSTALLED
+  // =========================
+  if (isStandalone) {
+    hideInstallButton();
     setHelpMessage("StockiePilot is already installed on this device.");
     return;
   }
 
-  showInstallButton("⬇ Install app");
-
+  // =========================
+  // iOS (MANUAL INSTALL)
+  // =========================
   if (isIos) {
-    setHelpMessage("On iPhone/iPad: tap Share, then choose 'Add to Home Screen' to install StockiePilot.");
-  } else if (isAndroid) {
-    setHelpMessage("On Android: tap install, or use browser menu > 'Install app' to add StockiePilot.");
-  } else {
-    setHelpMessage("Install StockiePilot for a full-screen POS experience. If prompt does not appear, use browser install menu.");
+    showInstallButton("How to Install");
+
+    setHelpMessage(
+      "Tap Share (⬆) in Safari, then select 'Add to Home Screen'."
+    );
+
+    installBtn.addEventListener("click", () => {
+      stopAnimation();
+      setHelpMessage(
+        "Safari → Share (⬆) → 'Add to Home Screen' → Install."
+      );
+    });
+
+    return;
   }
 
+  // =========================
+  // DEFAULT STATE
+  // =========================
+  hideInstallButton();
+  setHelpMessage("Preparing install option...");
+
+  // =========================
+  // INSTALL PROMPT AVAILABLE
+  // =========================
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredPrompt = event;
-    showInstallButton("⬇ Install app");
-    setHelpMessage("Tap install to add StockiePilot on this device.");
+
+    showInstallButton("⬇ Install App");
+
+    if (isAndroid) {
+      setHelpMessage("Tap install to add StockiePilot to your home screen.");
+    } else {
+      setHelpMessage("Install StockiePilot as a desktop app.");
+    }
   });
 
+  // =========================
+  // BUTTON CLICK
+  // =========================
   installBtn.addEventListener("click", async () => {
+    stopAnimation();
+
     if (!deferredPrompt) {
-      openStoreFallback();
-      setHelpMessage("No install prompt available in this browser. We opened the official app store link.");
+      setHelpMessage(
+        "Install not ready. Use browser menu → 'Install App'."
+      );
       return;
     }
 
     deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
 
-    if (outcome === "accepted") {
-      setHelpMessage("App installed. Launch StockiePilot from your home screen or desktop app launcher.");
-    } else {
-      setHelpMessage("Install was dismissed. You can install later from your browser menu.");
+    try {
+      const { outcome } = await deferredPrompt.userChoice;
+
+      if (outcome === "accepted") {
+        setHelpMessage(
+          "Installed successfully. Launch from your home screen."
+        );
+        hideInstallButton();
+      } else {
+        setHelpMessage(
+          "Install cancelled. You can install anytime from the browser menu."
+        );
+      }
+    } catch (error) {
+      setHelpMessage("Installation failed. Please try again.");
     }
 
     deferredPrompt = null;
-    installBtn.classList.add("hidden");
   });
 
+  // =========================
+  // INSTALLED EVENT
+  // =========================
   window.addEventListener("appinstalled", () => {
-    setHelpMessage("StockiePilot is installed on this device.");
-    installBtn.classList.add("hidden");
+    stopAnimation();
+    setHelpMessage("StockiePilot is now installed.");
+    hideInstallButton();
   });
 })();

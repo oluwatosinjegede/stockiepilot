@@ -1,7 +1,9 @@
 from pathlib import Path
 
 from django.conf import settings
-from django.http import HttpResponse, JsonResponse
+import json
+
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
 APP_DOWNLOAD_LINKS = {
@@ -57,11 +59,23 @@ def manifest_view(request):
         "theme_color": "#1d4ed8",
         "icons": [
             {
-                "src": "/static/pwa/icon.svg",
-                "sizes": "any",
-                "type": "image/svg+xml",
-                "purpose": "any maskable",
-            }
+                "src": "/static/pwa/icons/icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any",
+            },
+            {
+                "src": "/static/pwa/icons/icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any",
+            },
+            {
+                "src": "/static/pwa/icons/icon-maskable-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "maskable",
+            },
         ],
         "shortcuts": [
             {
@@ -71,7 +85,10 @@ def manifest_view(request):
             }
         ],
     }
-    return JsonResponse(manifest)
+    return HttpResponse(
+        json.dumps(manifest),
+        content_type="application/manifest+json",
+    )
 
 
 def service_worker_view(request):

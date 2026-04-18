@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="StockiePilot icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <path d="M116 332V188h52v40c16-19 39-28 69-28 31 0 56 10 74 29 18 20 27 47 27 82s-9 62-27 82c-18 19-43 29-74 29-30 0-53-9-69-28v38h-52zm110-87c0 18 4 33 13 43 9 10 21 16 37 16 16 0 28-6 37-16 9-11 13-25 13-43 0-18-4-32-13-43-9-10-21-15-37-15-16 0-28 5-37 15-9 11-13 25-13 43z" fill="#fff" />
+</svg>
