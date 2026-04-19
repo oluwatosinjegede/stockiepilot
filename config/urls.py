@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
 
+from config.pwa_views import manifest, service_worker
+from django.views.generic import TemplateView
+
 from apps.dashboard.views import dashboard
 from core.views import (
     home,
@@ -41,4 +44,13 @@ urlpatterns = [
     path('terms-of-service/', terms_of_service_page, name='terms_of_service_page'),
     path('data-protection/', data_protection_page, name='data_protection_page'),
     path('fraud-warning/', fraud_warning_page, name='fraud_warning_page'),
+
+
+
+    path("manifest.webmanifest", manifest, name="manifest"),
+    path("sw.js", service_worker, name="service_worker"),
+
+    path("offline/", TemplateView.as_view(template_name="offline.html"), name="offline"),
 ]
+
+

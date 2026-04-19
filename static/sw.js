@@ -1,12 +1,12 @@
-const CACHE_NAME = "stockiepilot-v3";
+const CACHE_NAME = "stockiepilot-v4";
 const APP_SHELL = [
   "/",
   "/dashboard/",
   "/sales/create/",
-  "/manifest.webmanifest",
+  "/offline/",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
-  "/static/js/pwa-install.js",
+  "/static/js/pwa-install.js"
 ];
 
 self.addEventListener("install", (event) => {
@@ -32,15 +32,25 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
+  const request = event.request;
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() => caches.match("/offline/") || caches.match("/"))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
+    caches.match(request).then((cached) => {
       if (cached) return cached;
-      return fetch(event.request)
+
+      return fetch(request)
         .then((response) => {
-          if (response.status === 200 && response.type === "basic") {
-            const cloned = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
-          }
+          if (!response || response.status !== 200) return response;
+
+          const cloned = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned));
           return response;
         })
         .catch(() => caches.match("/"));

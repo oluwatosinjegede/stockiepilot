@@ -9,17 +9,44 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="StockiePilot">
+  <meta name="description" content="Inventory control, sales tracking, POS, and analytics in one secure platform.">
+
   <link rel="manifest" href="{% url 'manifest' %}">
   <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
     body { font-family: 'Inter', sans-serif; }
+
+    @keyframes shine {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(120%); }
+    }
+
+    .install-shine::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        120deg,
+        transparent 0%,
+        rgba(255,255,255,0.18) 40%,
+        rgba(255,255,255,0.45) 50%,
+        rgba(255,255,255,0.18) 60%,
+        transparent 100%
+      );
+      transform: translateX(-120%);
+      animation: shine 2.5s linear infinite;
+    }
+
     .hero-gradient {
-      background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.35), transparent 40%),
-                  radial-gradient(circle at top left, rgba(14, 165, 233, 0.25), transparent 35%),
-                  linear-gradient(160deg, #020617, #0f172a 45%, #111827);
+      background:
+        radial-gradient(circle at top right, rgba(99,102,241,.35), transparent 40%),
+        radial-gradient(circle at top left, rgba(14,165,233,.25), transparent 35%),
+        linear-gradient(160deg, #020617, #0f172a 45%, #111827);
     }
   </style>
 </head>
@@ -27,6 +54,7 @@
   <header class="sticky top-0 z-40 bg-slate-950/75 backdrop-blur border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
       <a href="{% url 'home' %}" class="text-xl font-bold tracking-tight">StockiePilot</a>
+
       <nav class="hidden md:flex items-center gap-6 text-sm text-slate-300">
         <a href="{% url 'readme_page' %}" class="hover:text-white">Readme</a>
         <a href="{% url 'privacy_policy_page' %}" class="hover:text-white">Privacy</a>
@@ -34,17 +62,24 @@
         <a href="{% url 'data_protection_page' %}" class="hover:text-white">Data Protection</a>
         <a href="{% url 'fraud_warning_page' %}" class="hover:text-white">Fraud Warning</a>
       </nav>
+
       <div class="flex gap-3">
         <a href="{% url 'login' %}" class="px-4 py-2 rounded-lg border border-slate-700 text-sm hover:border-slate-500">Login</a>
         <a href="{% url 'register' %}" class="px-4 py-2 rounded-lg bg-indigo-500 text-sm font-semibold hover:bg-indigo-400">Get Started</a>
       </div>
     </div>
   </header>
+
   <div id="install-app-banner" class="border-b border-slate-800 bg-indigo-500/10">
     <div class="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-      <p id="install-app-help" class="text-xs text-indigo-100">Install StockiePilot for a full-screen app on mobile or desktop.</p>
-      <button id="install-app-btn" class="hidden px-4 py-2 rounded-lg bg-indigo-500 text-white text-sm font-semibold hover:bg-indigo-400 w-full md:w-auto">
-        ⬇ Install App
+      <p id="install-app-help" class="text-xs text-indigo-100">
+        Install StockiePilot for a full-screen app on mobile or desktop.
+      </p>
+
+      <button
+        id="install-app-btn"
+        class="hidden relative overflow-hidden px-4 py-2 rounded-lg bg-indigo-500 text-white text-sm font-semibold hover:bg-indigo-400 w-full md:w-auto shadow-lg transition-transform duration-300 hover:scale-105">
+        <span class="relative z-10">⬇ Install App</span>
       </button>
     </div>
   </div>
@@ -61,13 +96,14 @@
       </div>
     </div>
   </footer>
-   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/sw.js').catch(function (error) {
-          console.warn('Service worker registration failed:', error)
-        })
-      })
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("{% url 'service_worker' %}").catch(function (error) {
+          console.warn("Service worker registration failed:", error);
+        });
+      });
     }
   </script>
   <script src="{% static 'js/pwa-install.js' %}"></script>

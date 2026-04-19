@@ -9,163 +9,118 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="StockiePilot">
+  <meta name="description" content="Inventory control, sales tracking, POS, and analytics in one secure platform.">
+
   <link rel="manifest" href="{% url 'manifest' %}">
   <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
-  
-  <!-- Tailwind -->
+
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
     body { font-family: 'Inter', sans-serif; }
+
+    @keyframes shine {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(120%); }
+    }
+
+    .install-shine::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        120deg,
+        transparent 0%,
+        rgba(255,255,255,0.18) 40%,
+        rgba(255,255,255,0.45) 50%,
+        rgba(255,255,255,0.18) 60%,
+        transparent 100%
+      );
+      transform: translateX(-120%);
+      animation: shine 2.5s linear infinite;
+    }
   </style>
 </head>
-
 <body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
 
 <div class="flex h-full">
-
-  <!-- ================= SIDEBAR ================= -->
   <aside id="sidebar"
     class="fixed lg:relative z-30 w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0">
+    <div class="px-6 py-5 text-xl font-semibold tracking-tight">StockiePilot</div>
 
-    <!-- LOGO -->
-    <div class="px-6 py-5 text-xl font-semibold tracking-tight">
-      StockiePilot
-    </div>
-
-    <!-- NAV -->
     <nav class="flex-1 px-4 space-y-1">
-
       {% if request.user.role != "user" %}
-        <a href="{% url 'dashboard' %}"
-          class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium
-          {% if request.resolver_match.url_name == 'dashboard' %}
-            bg-slate-100 dark:bg-slate-700
-          {% else %}
-            hover:bg-slate-100 dark:hover:bg-slate-700
-          {% endif %}">
-          📊 Dashboard
-        </a>
-
-      <a href="{% url 'products' %}"
-          class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
-          {% if request.resolver_match.url_name == 'products' %}
-            bg-slate-100 dark:bg-slate-700
-          {% else %}
-            hover:bg-slate-100 dark:hover:bg-slate-700
-          {% endif %}">
-          📦 Products
-        </a>
-      {% endif %}
-      <a href="{% url 'sales' %}"
-        class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
-        {% if request.resolver_match.url_name == 'sales' %}
-          bg-slate-100 dark:bg-slate-700
-        {% else %}
-          hover:bg-slate-100 dark:hover:bg-slate-700
-        {% endif %}">
-        💰 Sales
-      </a>
-
-      {% if request.user.role != "user" %}
-        <a href="{% url 'subscription' %}"
-          class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm
-          {% if request.resolver_match.url_name == 'subscription' %}
-            bg-slate-100 dark:bg-slate-700
-          {% else %}
-            hover:bg-slate-100 dark:hover:bg-slate-700
-          {% endif %}">
-          💳 Subscription
-        </a>
+        <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">📊 Dashboard</a>
+        <a href="{% url 'products' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm {% if request.resolver_match.url_name == 'products' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">📦 Products</a>
       {% endif %}
 
+      <a href="{% url 'sales' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm {% if request.resolver_match.url_name == 'sales' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">💰 Sales</a>
+
+      {% if request.user.role != "user" %}
+        <a href="{% url 'subscription' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm {% if request.resolver_match.url_name == 'subscription' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">💳 Subscription</a>
+      {% endif %}
     </nav>
 
-    <!-- USER -->
     <div class="p-4 border-t border-slate-200 dark:border-slate-700 text-xs">
       <div class="font-medium">{{ request.user.email }}</div>
-      <div class="text-slate-500 mt-1">
-        {{ request.user.company.name|default:"" }}
-      </div>
+      <div class="text-slate-500 mt-1">{{ request.user.company.name|default:"" }}</div>
     </div>
-
   </aside>
 
-  <!-- ================= MAIN ================= -->
   <div class="flex-1 flex flex-col">
-
-    <!-- TOPBAR -->
     <header class="sticky top-0 z-20 bg-white/80 dark:bg-slate-800/80 backdrop-blur border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center">
-
       <div class="flex items-center gap-3">
-
-        <!-- Mobile toggle -->
-        <button onclick="toggleSidebar()" class="lg:hidden text-slate-600 dark:text-white">
-          ☰
-        </button>
-
-        <h1 class="text-lg font-semibold">
-          {{ page_title|default:"Dashboard" }}
-        </h1>
+        <button onclick="toggleSidebar()" class="lg:hidden text-slate-600 dark:text-white">☰</button>
+        <h1 class="text-lg font-semibold">{{ page_title|default:"Dashboard" }}</h1>
       </div>
 
       <div class="flex items-center gap-3">
-        <button id="install-app-btn" class="hidden px-3 py-1 rounded-md bg-blue-600 text-white text-sm font-medium">
-          ⬇ Install app
-        </button>
-        <button onclick="toggleDarkMode()"
-          class="px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-sm">
-          🌙
+        <button id="install-app-btn"
+          class="hidden relative overflow-hidden px-3 py-1 rounded-md bg-blue-600 text-white text-sm font-medium shadow-lg transition-transform duration-300 hover:scale-105">
+          <span class="relative z-10">⬇ Install app</span>
         </button>
 
-        <a href="{% url 'logout' %}" class="text-sm text-red-500">
-          Logout
-        </a>
-
+        <button onclick="toggleDarkMode()" class="px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-sm">🌙</button>
+        <a href="{% url 'logout' %}" class="text-sm text-red-500">Logout</a>
       </div>
     </header>
 
-        <div id="install-app-help" class="px-6 py-2 text-xs text-slate-500 dark:text-slate-300 bg-blue-50/60 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+    <div id="install-app-help" class="px-6 py-2 text-xs text-slate-500 dark:text-slate-300 bg-blue-50/60 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
       Install StockiePilot on desktop or mobile for a full-screen POS experience.
     </div>
-    <!-- CONTENT -->
+
     <main class="flex-1 p-6">
       {% block content %}{% endblock %}
     </main>
-
   </div>
-
 </div>
 
 <script>
-function toggleSidebar(){
-  document.getElementById('sidebar').classList.toggle('-translate-x-full')
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("-translate-x-full");
 }
 
-if (localStorage.getItem('theme') === 'dark') {
-  document.documentElement.classList.add('dark')
+if (localStorage.getItem("theme") === "dark") {
+  document.documentElement.classList.add("dark");
 }
 
-function toggleDarkMode(){
-  document.documentElement.classList.toggle('dark')
-  localStorage.setItem('theme',
-    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-  )
+function toggleDarkMode() {
+  document.documentElement.classList.toggle("dark");
+  localStorage.setItem(
+    "theme",
+    document.documentElement.classList.contains("dark") ? "dark" : "light"
+  );
 }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function (error) {
-      console.warn('Service worker registration failed:', error)
-    })
-  })
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("{% url 'service_worker' %}").catch(function (error) {
+      console.warn("Service worker registration failed:", error);
+    });
+  });
 }
 </script>
 <script src="{% static 'js/pwa-install.js' %}"></script>
