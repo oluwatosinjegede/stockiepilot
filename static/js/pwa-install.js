@@ -109,6 +109,15 @@
     }
   });
 
+  window.addEventListener("load", () => {
+    window.setTimeout(() => {
+      if (!deferredPrompt && !isIos) {
+        showInstallButton("Install App", false);
+        setHelpMessage("Use your browser menu (⋮) and choose 'Install App'.");
+      }
+    }, 1500);
+  });
+
   // =========================
   // BUTTON CLICK
   // =========================

@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  {% load static %}
   <meta charset="UTF-8">
   <title>Create Account - StockiePilot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1d4ed8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="StockiePilot">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -17,6 +25,12 @@
 </head>
 
 <body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 to-blue-500 p-4">
+  <div class="fixed top-4 right-4 flex flex-col items-end gap-2">
+  <button id="install-app-btn" class="hidden px-3 py-2 rounded-md bg-indigo-900/80 text-white text-sm font-medium">
+    ⬇ Install App
+  </button>
+  <p id="install-app-help" class="text-[11px] text-white/80 text-right max-w-52">Install StockiePilot for app mode.</p>
+</div>
 
 <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
 
@@ -125,7 +139,16 @@ function toggleNewCompanyInput() {
 
 companySelect.addEventListener('change', toggleNewCompanyInput);
 toggleNewCompanyInput();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function (error) {
+      console.warn('Service worker registration failed:', error)
+    })
+  })
+}
 </script>
+<script src="{% static 'js/pwa-install.js' %}"></script>
 
 </body>
 </html>

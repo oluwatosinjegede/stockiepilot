@@ -48,11 +48,13 @@ def home(request):
 
 def manifest_view(request):
     manifest = {
+        "id": "/?source=pwa",
         "name": "StockiePilot POS",
         "short_name": "StockiePilot",
         "description": "POS and inventory app for fast checkout on mobile and desktop.",
-        "start_url": "/",
+        "start_url": "/?source=pwa",
         "scope": "/",
+        "display_override": ["window-controls-overlay", "standalone"],
         "display": "standalone",
         "orientation": "any",
         "background_color": "#0f172a",

@@ -1,10 +1,12 @@
-const CACHE_NAME = "stockiepilot-v2";
+const CACHE_NAME = "stockiepilot-v3";
 const APP_SHELL = [
   "/",
+  "/dashboard/",
   "/sales/create/",
   "/manifest.webmanifest",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
+  "/static/js/pwa-install.js",
 ];
 
 self.addEventListener("install", (event) => {
