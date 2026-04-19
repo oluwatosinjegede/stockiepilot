@@ -17,6 +17,7 @@ from apps.affiliates.services import (
     register_affiliate_for_user,
     send_affiliate_activation_email,
 )
+from apps.affiliates.models import AffiliateProfile
 from apps.users.services import (
     send_verification_email,
     send_password_reset_email,
@@ -32,7 +33,10 @@ User = get_user_model()
 @transaction.atomic
 def register_view(request):
     existing_companies = Company.objects.order_by("name")
-    affiliates = Affiliate.objects.filter(is_active=True).order_by("full_name")
+    affiliates = AffiliateProfile.objects.select_related("user").filter(
+        status="active",
+        email_confirmed=True,
+    ).order_by("user__full_name")
 
     if request.method == "POST":
 
@@ -81,11 +85,20 @@ def register_view(request):
                 onboarding_status = "pending_approval"
             else:
                 selected_affiliate = None
+                selected_affiliate_profile = None
                 if affiliate_id:
-                    selected_affiliate = Affiliate.objects.filter(id=affiliate_id, is_active=True).first()
-                    if not selected_affiliate:
+                    selected_affiliate_profile = affiliates.filter(id=affiliate_id).first()
+                    if not selected_affiliate_profile:
                         messages.error(request, "Selected affiliate was not found.")
                         return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
+                    selected_affiliate, _ = Affiliate.objects.get_or_create(
+                        email=selected_affiliate_profile.user.email,
+                        defaults={
+                            "full_name": selected_affiliate_profile.user.full_name,
+                            "phone": selected_affiliate_profile.user.phone,
+                            "is_active": True,
+                        },
+                    )
 
                 existing_company = Company.objects.filter(name__iexact=new_company_name).first()
                 if existing_company:
@@ -121,6 +134,8 @@ def register_view(request):
 
             if referral_code:
                 attach_referral_to_new_user(user, referral_code)
+            elif selected_affiliate_profile:
+                attach_referral_to_new_user(user, selected_affiliate_profile.referral_code)
 
             # =========================
             # SUBSCRIPTION + BILLING

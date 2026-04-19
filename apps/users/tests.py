@@ -154,10 +154,24 @@ class AffiliateRegistrationTests(TestCase):
         self.assertRedirects(response, reverse("affiliate_login"), fetch_redirect_response=False)
 
     def test_company_registration_can_optionally_attach_affiliate(self):
-        affiliate = Affiliate.objects.create(
-            full_name="Referral Agent",
+        affiliate_user = User.objects.create_user(
             email="agent@example.com",
+            username="agent@example.com",
+            password="securepass123",
+            full_name="Referral Agent",
+            phone="5551231234",
+            is_active=True,
+            is_email_verified=True,
+            onboarding_status="active",
+            is_affiliate=True,
+            role="user",
+            is_staff=False,
         )
+
+        affiliate_profile = AffiliateProfile.objects.get(user=affiliate_user)
+        affiliate_profile.status = "active"
+        affiliate_profile.email_confirmed = True
+        affiliate_profile.save(update_fields=["status", "email_confirmed"])
 
         response = self.client.post(
             reverse("register"),
@@ -170,7 +184,7 @@ class AffiliateRegistrationTests(TestCase):
                 "address": "123 Main St",
                 "existing_company_id": "",
                 "new_company_name": "Affiliate Referred Co",
-                "affiliate_id": str(affiliate.id),
+                "affiliate_id": str(affiliate_profile.id),
             },
             follow=False,
         )
@@ -178,4 +192,4 @@ class AffiliateRegistrationTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("login"), fetch_redirect_response=False)
         company = Company.objects.get(name="Affiliate Referred Co")
-        self.assertEqual(company.referred_by_affiliate, affiliate)
+        self.assertEqual(company.referred_by_affiliate.email, affiliate_user.email)
