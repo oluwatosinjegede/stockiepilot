@@ -51,7 +51,7 @@ def manifest_view(request):
         "name": "StockiePilot POS",
         "short_name": "StockiePilot",
         "description": "POS and inventory app for fast checkout on mobile and desktop.",
-        "start_url": "/sales/create/",
+        "start_url": "/",
         "scope": "/",
         "display": "standalone",
         "orientation": "any",

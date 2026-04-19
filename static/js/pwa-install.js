@@ -1,6 +1,7 @@
 (function () {
   const installBtn = document.getElementById("install-app-btn");
   const installHelp = document.getElementById("install-app-help");
+  const installBanner = document.getElementById("install-app-banner");
 
   if (!installBtn) return;
 
@@ -13,6 +14,13 @@
     window.navigator.standalone === true;
 
   let deferredPrompt = null;
+
+  function hideBannerAfterInstallClick() {
+    if (!installBanner) return;
+    installBanner.classList.add("hidden");
+    localStorage.setItem("installNoticeClicked", "true");
+  }
+
 
   // =========================
   // HELPERS
@@ -44,8 +52,17 @@
   // ALREADY INSTALLED
   // =========================
   if (isStandalone) {
-    hideInstallButton();
-    setHelpMessage("StockiePilot is already installed on this device.");
+    if (installBanner) {
+      installBanner.classList.add("hidden");
+    } else {
+      hideInstallButton();
+      setHelpMessage("StockiePilot is already installed on this device.");
+    }
+    return;
+  }
+
+  if (localStorage.getItem("installNoticeClicked") === "true" && installBanner) {
+    installBanner.classList.add("hidden");
     return;
   }
 
@@ -61,6 +78,7 @@
 
     installBtn.addEventListener("click", () => {
       stopAnimation();
+      hideBannerAfterInstallClick();
       setHelpMessage(
         "Safari → Share (⬆) → 'Add to Home Screen' → Install."
       );
@@ -96,6 +114,7 @@
   // =========================
   installBtn.addEventListener("click", async () => {
     stopAnimation();
+    hideBannerAfterInstallClick();
 
     if (!deferredPrompt) {
       setHelpMessage(
@@ -131,6 +150,7 @@
   // =========================
   window.addEventListener("appinstalled", () => {
     stopAnimation();
+    localStorage.removeItem("installNoticeClicked");
     setHelpMessage("StockiePilot is now installed.");
     hideInstallButton();
   });
