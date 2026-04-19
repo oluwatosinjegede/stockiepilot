@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="space-y-6">
+  <h1 class="text-2xl font-bold">Affiliate Earnings Admin View</h1>
+
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-slate-500">
+          <th class="pb-2">Affiliate</th>
+          <th class="pb-2">Code</th>
+          <th class="pb-2">Status</th>
+          <th class="pb-2">Wallet Balance</th>
+          <th class="pb-2">Total Earned</th>
+          <th class="pb-2">Referrals</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for affiliate in affiliates %}
+          <tr class="border-t">
+            <td class="py-2">{{ affiliate.user.email }}</td>
+            <td>{{ affiliate.referral_code }}</td>
+            <td>{{ affiliate.status|title }}</td>
+            <td>₦{{ affiliate.wallet.balance|default:0 }}</td>
+            <td>₦{{ affiliate.wallet.total_earned|default:0 }}</td>
+            <td>{{ affiliate.referrals.count }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="py-4 text-slate-400">No affiliates found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

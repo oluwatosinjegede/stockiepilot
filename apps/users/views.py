@@ -12,6 +12,11 @@ from apps.companies.models import Company
 from apps.subscriptions.services import create_initial_subscription
 from apps.billing.services import create_signup_invoice
 from apps.users.models import Affiliate, CompanyUserApproval, EmailVerification
+from apps.affiliates.services import (
+    attach_referral_to_new_user,
+    register_affiliate_for_user,
+    send_affiliate_activation_email,
+)
 from apps.users.services import (
     send_verification_email,
     send_password_reset_email,
@@ -41,7 +46,8 @@ def register_view(request):
         selected_company_id = request.POST.get("existing_company_id", "").strip()
         new_company_name = request.POST.get("new_company_name", "").strip()
         affiliate_id = request.POST.get("affiliate_id", "").strip()
-
+        referral_code = (request.GET.get("ref") or request.POST.get("referral_code") or "").strip()
+        register_as_affiliate = request.POST.get("register_as_affiliate") == "on"
 
         # =========================
         # VALIDATION
@@ -113,6 +119,15 @@ def register_view(request):
                 role="staff" if is_company_admin else "user",
                 onboarding_status=onboarding_status,
             )
+
+            if register_as_affiliate:
+                user.is_affiliate = True
+                user.save(update_fields=["is_affiliate"])
+                affiliate_profile, _ = register_affiliate_for_user(user)
+                send_affiliate_activation_email(request, affiliate_profile)
+
+            if referral_code:
+                attach_referral_to_new_user(user, referral_code)
 
             # =========================
             # SUBSCRIPTION + BILLING

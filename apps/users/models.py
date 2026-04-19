@@ -56,6 +56,7 @@ class User(AbstractUser):
     address = models.TextField(blank=True)
 
     is_email_verified = models.BooleanField(default=False)
+    is_affiliate = models.BooleanField(default=False)
 
     ONBOARDING_STATUS_CHOICES = (
         ("pending_email_verification", "Pending Email Verification"),

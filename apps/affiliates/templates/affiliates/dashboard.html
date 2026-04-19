@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="space-y-6">
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold">Affiliate Dashboard</h1>
+      <p class="text-slate-500">Track your referrals, earnings, and wallet balance.</p>
+    </div>
+
+    {% if affiliate.status != "active" %}
+      <a href="{% url 'resend_affiliate_activation' %}"
+         class="px-4 py-2 rounded-lg bg-indigo-600 text-white">
+        Resend Activation Email
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow">
+      <p class="text-sm text-slate-500">Referral Code</p>
+      <h3 class="text-lg font-semibold">{{ affiliate.referral_code }}</h3>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow">
+      <p class="text-sm text-slate-500">Status</p>
+      <h3 class="text-lg font-semibold">{{ affiliate.status|title }}</h3>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow">
+      <p class="text-sm text-slate-500">Wallet Balance</p>
+      <h3 class="text-lg font-semibold">₦{{ wallet.balance|default:0 }}</h3>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow">
+      <p class="text-sm text-slate-500">Total Earned</p>
+      <h3 class="text-lg font-semibold">₦{{ wallet.total_earned|default:0 }}</h3>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow">
+    <h2 class="text-lg font-semibold mb-3">Paid Referrals</h2>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-slate-500">
+          <th class="pb-2">Referral</th>
+          <th class="pb-2">Payment</th>
+          <th class="pb-2">Commission</th>
+          <th class="pb-2">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in paid_referrals %}
+          <tr class="border-t">
+            <td class="py-2">{{ item.referred_email }}</td>
+            <td>₦{{ item.payment_amount }}</td>
+            <td>₦{{ item.commission_amount }}</td>
+            <td>{{ item.status|title }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="py-4 text-slate-400">No paid referrals yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

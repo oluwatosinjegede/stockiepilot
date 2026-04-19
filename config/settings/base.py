@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'apps.sales',
     'apps.subscriptions',
     'apps.billing',
+    'apps.affiliates.apps.AffiliatesConfig',
 ]
 
 

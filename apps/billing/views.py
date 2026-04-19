@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 
 from .models import Payment
 from .services import create_affiliate_commission_for_payment
+from apps.affiliates.services import credit_affiliate_commission_for_payment
 
 import json
 import hmac
@@ -103,6 +104,15 @@ def paystack_webhook(request):
         )
 
         create_affiliate_commission_for_payment(payment)
+
+        referred_user = company.user_set.filter(is_staff=True).order_by("id").first()
+        if referred_user:
+            credit_affiliate_commission_for_payment(
+                referred_user=referred_user,
+                payment_amount=payment.amount,
+                reference=reference,
+            )
+
 
         # 🔥 Activate subscription
         activate_subscription(company)

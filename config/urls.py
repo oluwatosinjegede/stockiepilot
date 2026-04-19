@@ -29,6 +29,7 @@ urlpatterns = [
 
     # Other pages
     path('subscription/', include('apps.subscriptions.urls')),
+    path('affiliates/', include('apps.affiliates.urls')),
 
     # PWA routes
     path('manifest.webmanifest', manifest_view, name='manifest'),
