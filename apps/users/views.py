@@ -47,7 +47,6 @@ def register_view(request):
         new_company_name = request.POST.get("new_company_name", "").strip()
         affiliate_id = request.POST.get("affiliate_id", "").strip()
         referral_code = (request.GET.get("ref") or request.POST.get("referral_code") or "").strip()
-        register_as_affiliate = request.POST.get("register_as_affiliate") == "on"
 
         # =========================
         # VALIDATION
@@ -120,12 +119,6 @@ def register_view(request):
                 onboarding_status=onboarding_status,
             )
 
-            if register_as_affiliate:
-                user.is_affiliate = True
-                user.save(update_fields=["is_affiliate"])
-                affiliate_profile, _ = register_affiliate_for_user(user)
-                send_affiliate_activation_email(request, affiliate_profile)
-
             if referral_code:
                 attach_referral_to_new_user(user, referral_code)
 
@@ -182,26 +175,70 @@ def affiliate_register_view(request):
         full_name = request.POST.get("full_name", "").strip()
         email = request.POST.get("email", "").strip().lower()
         phone = request.POST.get("phone", "").strip()
-        payout_details = request.POST.get("payout_details", "").strip()
+        password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
 
-        if not full_name or not email:
-            messages.error(request, "Full name and email are required.")
+        if not all([full_name, email, phone, password, confirm_password]):
+            messages.error(request, "All fields are required.")
             return render(request, "auth/affiliate_register.html")
 
-        if Affiliate.objects.filter(email=email).exists():
-            messages.error(request, "Affiliate with this email already exists.")
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
             return render(request, "auth/affiliate_register.html")
 
-        Affiliate.objects.create(
-            full_name=full_name,
+        if len(password) < 6:
+            messages.error(request, "Password must be at least 6 characters.")
+            return render(request, "auth/affiliate_register.html")
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "A user with this email already exists.")
+            return render(request, "auth/affiliate_register.html")
+
+        user = User.objects.create_user(
+            username=email,
             email=email,
+            password=password,
+            full_name=full_name,
             phone=phone,
-            payout_details=payout_details,
+            address="",
+            is_active=True,
+            is_staff=False,
+            role="user",
+            is_email_verified=True,
+            onboarding_status="active",
+            is_affiliate=True,
         )
-        messages.success(request, "Affiliate registration successful.")
-        return redirect("register")
+        affiliate_profile, _ = register_affiliate_for_user(user)
+        send_affiliate_activation_email(request, affiliate_profile)
+
+        messages.success(request, "Affiliate account created. Please login and activate your account from email.")
+        return redirect("affiliate_login")
 
     return render(request, "auth/affiliate_register.html")
+
+def affiliate_login_view(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password")
+
+        if not email or not password:
+            messages.error(request, "Email and password are required")
+            return render(request, "auth/affiliate_login.html")
+
+        user = authenticate(request, username=email, password=password)
+
+        if user is None:
+            messages.error(request, "Invalid credentials")
+            return render(request, "auth/affiliate_login.html")
+
+        if not user.is_affiliate:
+            messages.error(request, "This account is not an affiliate account.")
+            return render(request, "auth/affiliate_login.html")
+
+        login(request, user)
+        return redirect("affiliate_dashboard")
+
+    return render(request, "auth/affiliate_login.html")
 
 # =========================
 # EMAIL VERIFICATION
@@ -325,6 +362,10 @@ def login_view(request):
         if user is None:
             messages.error(request, "Invalid credentials")
             return render(request, "auth/login.html")
+        
+        if user.is_affiliate:
+            messages.error(request, "Affiliate accounts must login through the affiliate login page.")
+            return redirect("affiliate_login")
         
         if user.onboarding_status == "pending_approval":
             messages.error(request, "Your account is pending company approval.")
@@ -496,4 +537,3 @@ def create_user_view(request):
 
         messages.success(request, "User created successfully.")
         return redirect("dashboard")
-    

@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.companies.models import Company
+from apps.affiliates.models import AffiliateProfile
 from apps.users.models import Affiliate, CompanyUserApproval, User
 
 
@@ -115,14 +116,42 @@ class AffiliateRegistrationTests(TestCase):
                 "full_name": "Jane Partner",
                 "email": "jane.partner@example.com",
                 "phone": "1234567890",
-                "payout_details": "Bank XYZ",
+                "password": "securepass123",
+                "confirm_password": "securepass123",
             },
             follow=False,
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse("register"), fetch_redirect_response=False)
-        self.assertTrue(Affiliate.objects.filter(email="jane.partner@example.com").exists())
+        self.assertRedirects(response, reverse("affiliate_login"), fetch_redirect_response=False)
+        user = User.objects.get(email="jane.partner@example.com")
+        self.assertTrue(user.is_affiliate)
+        self.assertTrue(AffiliateProfile.objects.filter(user=user).exists())
+
+    def test_regular_login_blocks_affiliate_accounts(self):
+        user = User.objects.create_user(
+            email="affiliate@example.com",
+            username="affiliate@example.com",
+            password="testpass123",
+            full_name="Affiliate",
+            phone="1234567890",
+            is_active=True,
+            is_email_verified=True,
+            onboarding_status="active",
+            is_affiliate=True,
+            role="user",
+            is_staff=False,
+        )
+        AffiliateProfile.objects.filter(user=user).update(status="active", email_confirmed=True)
+
+        response = self.client.post(
+            reverse("login"),
+            {"email": user.email, "password": "testpass123"},
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("affiliate_login"), fetch_redirect_response=False)
 
     def test_company_registration_can_optionally_attach_affiliate(self):
         affiliate = Affiliate.objects.create(
