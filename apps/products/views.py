@@ -22,9 +22,17 @@ PLAN_LIMITS = {
     "enterprise": None,
 }
 
+def _redirect_affiliate_if_needed(request):
+    if request.user.is_affiliate:
+        messages.error(request, "Affiliate accounts cannot access Products.")
+        return redirect("affiliate_dashboard")
+    return None
 
 @login_required
 def products_view(request):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
     company = getattr(request.user, "company", None)
 
     if not company:
@@ -298,6 +306,9 @@ def _build_product_analytics(products):
 # =========================
 @login_required
 def get_product_price(request, product_id):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
 
     company = request.user.company
 
@@ -314,6 +325,9 @@ def get_product_price(request, product_id):
 # =========================
 @login_required
 def edit_product(request, product_id):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
 
     company = request.user.company
     product = get_object_or_404(Product, id=product_id, company=company)
@@ -356,6 +370,9 @@ def edit_product(request, product_id):
 # =========================
 @login_required
 def delete_product(request, product_id):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
 
     product = get_object_or_404(Product, id=product_id, company=request.user.company)
 

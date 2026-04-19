@@ -28,6 +28,9 @@ def validate_plan(plan):
 
 @login_required
 def subscription_view(request):
+    if request.user.is_affiliate:
+        messages.error(request, "Affiliate accounts cannot access Subscription.")
+        return redirect("affiliate_dashboard")
 
     if request.user.role == "user":
         messages.error(request, "Company users can only access the Sales module.")
@@ -56,6 +59,10 @@ def subscription_view(request):
 
 @login_required
 def subscribe(request, plan):
+    if request.user.is_affiliate:
+        messages.error(request, "Affiliate accounts cannot access Subscription.")
+        return redirect("affiliate_dashboard")
+
     if request.user.role == "user":
         messages.error(request, "Company users can only access the Sales module.")
         return redirect("sales")
@@ -110,6 +117,10 @@ def subscribe(request, plan):
 
 @login_required
 def payment_callback(request):
+    if request.user.is_affiliate:
+        messages.error(request, "Affiliate accounts cannot access Subscription.")
+        return redirect("affiliate_dashboard")
+
     if request.user.role == "user":
         messages.error(request, "Company users can only access the Sales module.")
         return redirect("sales")

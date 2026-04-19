@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def dashboard(request):
+    if request.user.is_affiliate:
+        return redirect("affiliate_dashboard")
     if request.user.role == "user":
         return redirect("sales")
     company = getattr(request.user, "company", None)

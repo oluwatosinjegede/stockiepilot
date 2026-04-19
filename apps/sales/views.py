@@ -9,12 +9,20 @@ from apps.products.models import Product
 from .models import Sale, SaleItem
 from .services.analytics import build_sales_analytics
 
+def _redirect_affiliate_if_needed(request):
+    if request.user.is_affiliate:
+        messages.error(request, "Affiliate accounts cannot access Sales.")
+        return redirect("affiliate_dashboard")
+    return None
 
 # =========================
 # CREATE SALE (POS READY)
 # =========================
 @login_required
 def create_sale(request):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
 
     company = getattr(request.user, "company", None)
 
@@ -144,6 +152,9 @@ def create_sale(request):
 # =========================
 @login_required
 def sales_view(request):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
 
     company = getattr(request.user, "company", None)
 
@@ -199,6 +210,9 @@ def sales_view(request):
 
 @login_required
 def update_sale_payment(request, sale_id):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
     if request.method != "POST":
         return redirect("sales")
 
@@ -256,6 +270,9 @@ def update_sale_payment(request, sale_id):
 # =========================
 @login_required
 def sales_list(request):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
 
     company = getattr(request.user, "company", None)
 

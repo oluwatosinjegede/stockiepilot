@@ -482,8 +482,9 @@ def reset_password_view(request, uidb64, token):
 # LOGOUT VIEW
 # =========================
 def logout_view(request):
+    redirect_url = "affiliate_login" if getattr(request.user, "is_affiliate", False) else "login"
     logout(request)
-    return redirect('login')
+    return redirect(redirect_url)
 
 
 # =========================

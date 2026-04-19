@@ -52,14 +52,18 @@
     <div class="px-6 py-5 text-xl font-semibold tracking-tight">StockiePilot</div>
 
     <nav class="flex-1 px-4 space-y-1">
-      {% if request.user.role != "user" %}
+      {% if request.user.is_affiliate %}
+        <a href="{% url 'affiliate_dashboard' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'affiliate_dashboard' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">🤝 Affiliate Dashboard</a>
+      {% elif request.user.role != "user" %}
         <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">📊 Dashboard</a>
         <a href="{% url 'products' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm {% if request.resolver_match.url_name == 'products' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">📦 Products</a>
       {% endif %}
 
-      <a href="{% url 'sales' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm {% if request.resolver_match.url_name == 'sales' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">💰 Sales</a>
+      {% if not request.user.is_affiliate %}
+        <a href="{% url 'sales' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm {% if request.resolver_match.url_name == 'sales' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">💰 Sales</a>
+      {% endif %}
 
-      {% if request.user.role != "user" %}
+      {% if request.user.role != "user" and not request.user.is_affiliate %}
         <a href="{% url 'subscription' %}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm {% if request.resolver_match.url_name == 'subscription' %}bg-slate-100 dark:bg-slate-700{% else %}hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">💳 Subscription</a>
       {% endif %}
     </nav>

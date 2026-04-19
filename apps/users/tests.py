@@ -193,3 +193,41 @@ class AffiliateRegistrationTests(TestCase):
         self.assertRedirects(response, reverse("login"), fetch_redirect_response=False)
         company = Company.objects.get(name="Affiliate Referred Co")
         self.assertEqual(company.referred_by_affiliate.email, affiliate_user.email)
+
+class AffiliateAccessControlTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="affiliate.access@example.com",
+            username="affiliate.access@example.com",
+            password="testpass123",
+            full_name="Affiliate Access",
+            phone="1234567890",
+            is_active=True,
+            is_email_verified=True,
+            onboarding_status="active",
+            is_affiliate=True,
+            role="staff",
+            is_staff=False,
+        )
+        self.client.force_login(self.user)
+
+    def test_affiliate_logout_redirects_to_affiliate_login(self):
+        response = self.client.get(reverse("logout"), follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("affiliate_login"), fetch_redirect_response=False)
+
+    def test_affiliate_is_blocked_from_sales_products_and_subscription(self):
+        restricted_urls = [
+            reverse("sales"),
+            reverse("products"),
+            reverse("subscription"),
+        ]
+        for url in restricted_urls:
+            with self.subTest(url=url):
+                response = self.client.get(url, follow=False)
+                self.assertEqual(response.status_code, 302)
+                self.assertRedirects(
+                    response,
+                    reverse("affiliate_dashboard"),
+                    fetch_redirect_response=False,
+                )
