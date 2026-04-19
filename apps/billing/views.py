@@ -4,13 +4,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
 
-
 import requests
 from django.conf import settings
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 
 from .models import Payment
+from .services import create_affiliate_commission_for_payment
 
 import json
 import hmac
@@ -39,7 +39,8 @@ def pay_signup(request):
         "amount": amount * 100,  # kobo
         "callback_url": "http://127.0.0.1:8000/billing/payment-success/",
         "metadata": {
-            "company_id": company.id
+             "company_id": company.id,
+            "payment_type": "signup",
         }
     }
 
@@ -80,6 +81,9 @@ def paystack_webhook(request):
         email = payment_data['customer']['email']
         amount = payment_data['amount'] / 100
         reference = payment_data['reference']
+        gateway = payment_data.get("channel", "paystack")
+        metadata = payment_data.get("metadata") or {}
+        payment_type = metadata.get("payment_type", "subscription")
 
         # Find user/company
         from django.contrib.auth import get_user_model
@@ -91,10 +95,14 @@ def paystack_webhook(request):
         # Save payment
         payment = Payment.objects.create(
             company=company,
+            payment_type=payment_type,
             amount=amount,
+            payment_gateway=gateway,
             transaction_reference=reference,
             status='success'
         )
+
+        create_affiliate_commission_for_payment(payment)
 
         # 🔥 Activate subscription
         activate_subscription(company)

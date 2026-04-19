@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.companies.models import Company
-from apps.users.models import CompanyUserApproval, User
+from apps.users.models import Affiliate, CompanyUserApproval, User
 
 
 class CompanyApprovalFlowTests(TestCase):
@@ -105,3 +105,48 @@ class IdleLogoutMiddlewareTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("_auth_user_id", self.client.session)
+        
+
+class AffiliateRegistrationTests(TestCase):
+    def test_affiliate_can_register(self):
+        response = self.client.post(
+            reverse("affiliate_register"),
+            {
+                "full_name": "Jane Partner",
+                "email": "jane.partner@example.com",
+                "phone": "1234567890",
+                "payout_details": "Bank XYZ",
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("register"), fetch_redirect_response=False)
+        self.assertTrue(Affiliate.objects.filter(email="jane.partner@example.com").exists())
+
+    def test_company_registration_can_optionally_attach_affiliate(self):
+        affiliate = Affiliate.objects.create(
+            full_name="Referral Agent",
+            email="agent@example.com",
+        )
+
+        response = self.client.post(
+            reverse("register"),
+            {
+                "email": "new-owner@example.com",
+                "password": "securepass123",
+                "confirm_password": "securepass123",
+                "full_name": "New Owner",
+                "phone": "1234567890",
+                "address": "123 Main St",
+                "existing_company_id": "",
+                "new_company_name": "Affiliate Referred Co",
+                "affiliate_id": str(affiliate.id),
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("login"), fetch_redirect_response=False)
+        company = Company.objects.get(name="Affiliate Referred Co")
+        self.assertEqual(company.referred_by_affiliate, affiliate)

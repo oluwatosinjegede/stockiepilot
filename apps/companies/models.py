@@ -8,6 +8,13 @@ class Company(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=30, null=True, blank=True)
     address = models.TextField(blank=True)
+    referred_by_affiliate = models.ForeignKey(
+        "users.Affiliate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="referred_companies",
+    )
 
     subscription_plan = models.CharField(
         max_length=20,

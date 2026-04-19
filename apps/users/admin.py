@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
+from .models import Affiliate, User
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
@@ -19,3 +19,10 @@ class CustomUserAdmin(UserAdmin):
 
     search_fields = ('email', 'username')
     ordering = ('email',)
+
+
+@admin.register(Affiliate)
+class AffiliateAdmin(admin.ModelAdmin):
+    list_display = ("full_name", "email", "phone", "is_active", "created_at")
+    list_filter = ("is_active", "created_at")
+    search_fields = ("full_name", "email", "phone")

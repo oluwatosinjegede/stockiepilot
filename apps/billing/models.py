@@ -1,6 +1,7 @@
 # apps/billing/models.py
 
 from django.db import models
+from django.utils import timezone
 
 class SubscriptionPlan(models.Model):
     PLAN_TYPES = (
@@ -148,4 +149,19 @@ class PaymentEvent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "payment_events"
+         db_table = "payment_events"
+
+
+class AffiliateCommission(models.Model):
+    affiliate = models.ForeignKey("users.Affiliate", on_delete=models.CASCADE, related_name="commissions")
+    company = models.ForeignKey("companies.Company", on_delete=models.CASCADE, related_name="affiliate_commissions")
+    payment = models.OneToOneField("billing.Payment", on_delete=models.CASCADE, related_name="affiliate_commission")
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+    commission_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "affiliate_commissions"
+
+    def __str__(self):
+        return f"{self.affiliate.email} - {self.commission_amount}"

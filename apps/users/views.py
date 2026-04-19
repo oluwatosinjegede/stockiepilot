@@ -11,7 +11,7 @@ from django.utils import timezone
 from apps.companies.models import Company
 from apps.subscriptions.services import create_initial_subscription
 from apps.billing.services import create_signup_invoice
-from apps.users.models import EmailVerification, CompanyUserApproval
+from apps.users.models import Affiliate, CompanyUserApproval, EmailVerification
 from apps.users.services import (
     send_verification_email,
     send_password_reset_email,
@@ -27,6 +27,7 @@ User = get_user_model()
 @transaction.atomic
 def register_view(request):
     existing_companies = Company.objects.order_by("name")
+    affiliates = Affiliate.objects.filter(is_active=True).order_by("full_name")
 
     if request.method == "POST":
 
@@ -39,49 +40,59 @@ def register_view(request):
         address = request.POST.get("address")
         selected_company_id = request.POST.get("existing_company_id", "").strip()
         new_company_name = request.POST.get("new_company_name", "").strip()
+        affiliate_id = request.POST.get("affiliate_id", "").strip()
+
 
         # =========================
         # VALIDATION
         # =========================
         if not all([email, password, confirm_password, full_name, phone]):
             messages.error(request, "All required fields must be filled")
-            return render(request, "auth/register.html", {"existing_companies": existing_companies})
+            return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
         
         if password != confirm_password:
             messages.error(request, "Passwords do not match")
-            return render(request, "auth/register.html", {"existing_companies": existing_companies})
+            return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
 
         if len(password) < 6:
             messages.error(request, "Password must be at least 6 characters")
-            return render(request, "auth/register.html", {"existing_companies": existing_companies})
+            return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
 
         if User.objects.filter(email=email).exists():
             messages.error(request, "User already exists")
-            return render(request, "auth/register.html", {"existing_companies": existing_companies})
+            return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
 
         if not selected_company_id and not new_company_name:
             messages.error(request, "Select an existing company or enter a new company name.")
-            return render(request, "auth/register.html", {"existing_companies": existing_companies})
+            return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
 
         try:
             if selected_company_id:
                 company = Company.objects.filter(id=selected_company_id).first()
                 if not company:
                     messages.error(request, "Selected company not found.")
-                    return render(request, "auth/register.html", {"existing_companies": existing_companies})
+                    return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
                 is_company_admin = False
                 onboarding_status = "pending_approval"
             else:
+                selected_affiliate = None
+                if affiliate_id:
+                    selected_affiliate = Affiliate.objects.filter(id=affiliate_id, is_active=True).first()
+                    if not selected_affiliate:
+                        messages.error(request, "Selected affiliate was not found.")
+                        return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
+
                 existing_company = Company.objects.filter(name__iexact=new_company_name).first()
                 if existing_company:
                     messages.error(request, "Company name already exists. Please select it from the list.")
-                    return render(request, "auth/register.html", {"existing_companies": existing_companies})
+                    return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
 
                 company = Company.objects.create(
                     name=new_company_name,
                     email=email,
                     phone=phone,
-                    address=address
+                    address=address,
+                    referred_by_affiliate=selected_affiliate,
                 )
                 is_company_admin = True
                 onboarding_status = "pending_email_verification"
@@ -145,10 +156,37 @@ def register_view(request):
 
         except Exception as e:
             messages.error(request, f"Registration failed: {str(e)}")
-            return render(request, "auth/register.html", {"existing_companies": existing_companies})
+            return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
 
-    return render(request, "auth/register.html", {"existing_companies": existing_companies})
+    return render(request, "auth/register.html", {"existing_companies": existing_companies, "affiliates": affiliates})
 
+
+@transaction.atomic
+def affiliate_register_view(request):
+    if request.method == "POST":
+        full_name = request.POST.get("full_name", "").strip()
+        email = request.POST.get("email", "").strip().lower()
+        phone = request.POST.get("phone", "").strip()
+        payout_details = request.POST.get("payout_details", "").strip()
+
+        if not full_name or not email:
+            messages.error(request, "Full name and email are required.")
+            return render(request, "auth/affiliate_register.html")
+
+        if Affiliate.objects.filter(email=email).exists():
+            messages.error(request, "Affiliate with this email already exists.")
+            return render(request, "auth/affiliate_register.html")
+
+        Affiliate.objects.create(
+            full_name=full_name,
+            email=email,
+            phone=phone,
+            payout_details=payout_details,
+        )
+        messages.success(request, "Affiliate registration successful.")
+        return redirect("register")
+
+    return render(request, "auth/affiliate_register.html")
 
 # =========================
 # EMAIL VERIFICATION
