@@ -58,11 +58,10 @@
         {% if current_plan == plan.key and is_active %}
           <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">Current Plan</button>
         {% elif request.user.role == 'staff' and plan.key != 'free' %}
-          <form method="post" action="{% url 'subscribe' plan.key %}">
-            {% csrf_token %}
-            <input type="hidden" name="billing_cycle" value="{{ selected_billing_cycle }}">
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">{% if current_plan == plan.key %}Switch Billing{% else %}Upgrade{% endif %}</button>
-          </form>
+           <a href="{% url 'paystack_init' plan.key %}?billing_cycle={{ selected_billing_cycle }}"
+             class="block w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition text-center">
+             {% if current_plan == plan.key %}Switch Billing{% else %}Upgrade{% endif %}
+          </a>
         {% else %}
           <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">Not Available</button>
         {% endif %}

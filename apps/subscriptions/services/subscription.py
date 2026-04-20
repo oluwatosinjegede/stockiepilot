@@ -105,7 +105,7 @@ def create_initial_subscription(company):
     )
     if hasattr(company, "subscription_plan"):
         company.subscription_plan = Plans.FREE
-        ompany.save(update_fields=["subscription_plan"])
+        company.save(update_fields=["subscription_plan"])
     return subscription
 
 
