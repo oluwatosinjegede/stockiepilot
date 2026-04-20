@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
+  <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+    <h2 class="text-xl font-semibold">Your Profile</h2>
+    <p class="text-sm text-slate-500 mt-1">Update your details and upload a profile photo.</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="p-6 space-y-5">
+    {% csrf_token %}
+
+    {% if messages %}
+      <div class="space-y-2">
+        {% for message in messages %}
+          <div class="px-4 py-2 rounded-md text-sm {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-slate-100 text-slate-700{% endif %}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium mb-1">Full name</label>
+        <input type="text" name="full_name" value="{{ request.user.full_name }}" required class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Phone</label>
+        <input type="text" name="phone" value="{{ request.user.phone }}" required class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Email</label>
+        <input type="email" value="{{ request.user.email }}" disabled class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-slate-500">
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium mb-1">Address</label>
+        <textarea name="address" rows="3" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2">{{ request.user.address }}</textarea>
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium mb-1">Profile photo</label>
+        <input type="file" name="profile_photo" accept="image/*" class="w-full text-sm">
+        <p class="text-xs text-slate-500 mt-1">Supported: image files up to 5MB.</p>
+        {% if request.user.role == "user" and request.user.company %}
+          <p class="text-xs text-blue-600 dark:text-blue-300 mt-2">Tip: If you represent your company, use your company logo for better team recognition.</p>
+        {% endif %}
+      </div>
+
+      {% if request.user.profile_photo %}
+      <div class="sm:col-span-2">
+        <p class="text-sm font-medium mb-2">Current photo</p>
+        <img src="{{ request.user.profile_photo.url }}" alt="Profile photo" class="h-24 w-24 object-cover rounded-full border border-slate-200 dark:border-slate-700">
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="flex justify-end">
+      <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Save profile</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
