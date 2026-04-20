@@ -104,13 +104,20 @@ def credit_affiliate_commission_for_payment(referred_user, payment_amount: Decim
             "affiliate", "affiliate__wallet"
         ).get(
             referred_user=referred_user,
-            status__in=["registered", "paid"],
+            status__in=["registered", "paid", "commissioned"],
         )
     except AffiliateReferral.DoesNotExist:
         return None
 
     commission = (payment_amount * referral.affiliate.commission_rate) / Decimal("100.00")
     wallet, _ = AffiliateWallet.objects.get_or_create(affiliate=referral.affiliate)
+
+    if reference and AffiliateWalletTransaction.objects.filter(
+        wallet=wallet,
+        transaction_type="credit",
+        reference=reference,
+    ).exists():
+        return referral
 
     wallet.credit(commission)
 
@@ -122,8 +129,8 @@ def credit_affiliate_commission_for_payment(referred_user, payment_amount: Decim
         reference=reference,
     )
 
-    referral.payment_amount = payment_amount
-    referral.commission_amount = commission
+    referral.payment_amount += payment_amount
+    referral.commission_amount += commission
     referral.status = "commissioned"
     referral.paid_at = timezone.now()
     referral.save(
@@ -131,3 +138,40 @@ def credit_affiliate_commission_for_payment(referred_user, payment_amount: Decim
     )
 
     return referral
+
+
+@transaction.atomic
+def credit_affiliate_commission_for_company_payment(
+    company,
+    payment_amount: Decimal,
+    reference: str = "",
+    paying_user=None,
+):
+    referral = (
+        AffiliateReferral.objects.select_related("referred_user")
+        .filter(referred_user__company=company, status__in=["registered", "paid", "commissioned"])
+        .order_by(
+            "-referred_user__is_staff",
+            "created_at",
+        )
+        .first()
+    )
+
+    if paying_user:
+        direct_referral = credit_affiliate_commission_for_payment(
+            referred_user=paying_user,
+            payment_amount=payment_amount,
+            reference=reference,
+        )
+        if direct_referral:
+            return direct_referral
+
+    referred_user = getattr(referral, "referred_user", None)
+    if not referred_user:
+        return None
+
+    return credit_affiliate_commission_for_payment(
+        referred_user=referred_user,
+        payment_amount=payment_amount,
+        reference=reference,
+    )

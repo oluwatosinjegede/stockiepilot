@@ -3,8 +3,10 @@ from django.conf import settings
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from decimal import Decimal
 from apps.subscriptions.constants import BillingCycle, PLAN_DEFINITIONS, Plans
 from apps.subscriptions.services import upgrade_subscription
+from apps.affiliates.services import credit_affiliate_commission_for_company_payment
 
 def _get_plan_amount_in_kobo(plan, billing_cycle):
     if plan not in PLAN_DEFINITIONS:
@@ -100,6 +102,14 @@ def verify_paystack_payment(request):
                 billing_cycle=billing_cycle,
                 auto_renew=True,
             )
+            amount_paid = Decimal(str(data.get("amount", 0))) / Decimal("100")
+            if amount_paid > 0:
+                credit_affiliate_commission_for_company_payment(
+                    company=company,
+                    payment_amount=amount_paid,
+                    reference=reference or "",
+                    paying_user=request.user,
+                )
 
             messages.success(
                 request,
