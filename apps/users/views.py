@@ -552,4 +552,39 @@ def create_user_view(request):
         )
 
         messages.success(request, "User created successfully.")
-        return redirect("dashboard")
+         return redirect("dashboard")
+
+@login_required
+def profile_view(request):
+
+    if request.method == "POST":
+        full_name = request.POST.get("full_name", "").strip()
+        phone = request.POST.get("phone", "").strip()
+        address = request.POST.get("address", "").strip()
+        profile_photo = request.FILES.get("profile_photo")
+
+        if not full_name or not phone:
+            messages.error(request, "Full name and phone are required.")
+            return redirect("profile")
+
+        request.user.full_name = full_name
+        request.user.phone = phone
+        request.user.address = address
+
+        if profile_photo:
+            if not profile_photo.content_type or not profile_photo.content_type.startswith("image/"):
+                messages.error(request, "Please upload a valid image file.")
+                return redirect("profile")
+            if profile_photo.size > 5 * 1024 * 1024:
+                messages.error(request, "Profile photo must be 5MB or less.")
+                return redirect("profile")
+
+            if request.user.profile_photo:
+                request.user.profile_photo.delete(save=False)
+            request.user.profile_photo = profile_photo
+
+        request.user.save(update_fields=["full_name", "phone", "address", "profile_photo"])
+        messages.success(request, "Profile updated successfully.")
+        return redirect("profile")
+
+    return render(request, "auth/profile.html")

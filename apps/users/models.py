@@ -55,6 +55,8 @@ class User(AbstractUser):
     phone = models.CharField(max_length=30)
     address = models.TextField(blank=True)
 
+    profile_photo = models.FileField(upload_to="profile_photos/", blank=True, null=True)
+
     is_email_verified = models.BooleanField(default=False)
     is_affiliate = models.BooleanField(default=False)
 

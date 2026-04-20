@@ -112,6 +112,7 @@ AUTO_LOGOUT_IDLE_SECONDS = int(os.getenv("AUTO_LOGOUT_IDLE_SECONDS", "300"))
 # =========================
 
 MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # =========================
