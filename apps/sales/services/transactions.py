@@ -85,6 +85,7 @@ def create_sale_with_payment(company, user, sale_data, items_data):
         raise ValidationError("Invalid payment type.")
 
     customer_name = (sale_data.get("customer_name") or "").strip()
+    payment_method = (sale_data.get("payment_method") or "").strip()
     amount_paid = Decimal(sale_data.get("amount_paid") or "0")
 
     total = Decimal("0")
@@ -97,16 +98,17 @@ def create_sale_with_payment(company, user, sale_data, items_data):
             raise ValidationError(f"Not enough stock for {product.name}.")
         total += Decimal(product.selling_price) * qty
 
+    if not customer_name:
+        raise ValidationError("Customer name is required for all sales.")
+    if not payment_method:
+        raise ValidationError("Payment method is required for all sales.")
+
     if payment_type == "paid":
         amount_paid = total
     elif payment_type == "partial":
-        if not customer_name:
-            raise ValidationError("Customer name is required for partial payments.")
         if amount_paid <= 0 or amount_paid >= total:
             raise ValidationError("Partial payment must be greater than 0 and less than the total.")
     else:  # zero
-        if not customer_name:
-            raise ValidationError("Customer name is required for zero-payment sales.")
         amount_paid = Decimal("0")
 
     sale = Sale.objects.create(company=company, customer_name=customer_name)
@@ -123,7 +125,7 @@ def create_sale_with_payment(company, user, sale_data, items_data):
             sale=sale,
             company=company,
             amount=amount_paid,
-            payment_method=(sale_data.get("payment_method") or "").strip(),
+            payment_method=payment_method,
             reference=(sale_data.get("reference") or "").strip(),
             notes=(sale_data.get("notes") or "").strip(),
             created_by=user,

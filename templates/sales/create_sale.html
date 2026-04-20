@@ -60,9 +60,12 @@
           <option value="zero">Zero Payment</option>
         </select>
 
-        <div id="partial-payment-fields" class="hidden space-y-2">
+        <div class="space-y-2">
           <input type="text" name="payment_method" id="payment_method" class="w-full border p-2 rounded-lg bg-white dark:bg-slate-900" placeholder="Payment method (cash, transfer, card)">
           <input type="text" name="customer_name" id="customer_name" class="w-full border p-2 rounded-lg bg-white dark:bg-slate-900" placeholder="Customer name">
+          </div>
+
+        <div id="partial-payment-fields" class="hidden space-y-2">
           <input type="number" step="0.01" min="0" name="amount_paid" id="amount_paid" class="w-full border p-2 rounded-lg bg-white dark:bg-slate-900" placeholder="Amount paid">
           <div class="flex justify-between text-sm">
             <span>Balance</span>
@@ -182,6 +185,19 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    const customer = document.getElementById("customer_name")?.value?.trim();
+    const paymentMethod = document.getElementById("payment_method")?.value?.trim();
+    if (!customer) {
+      event.preventDefault();
+      alert("Customer name is required for all sales.");
+      return;
+    }
+    if (!paymentMethod) {
+      event.preventDefault();
+      alert("Payment method is required for all sales.");
+      return;
+    }
+
     if (paymentStatusField.value === "partial" || paymentStatusField.value === "zero") {
       const paid = parseFloat(amountPaidField?.value || "0") || 0;
       const total = parseFloat(totalField.value || "0") || 0;
@@ -192,11 +208,6 @@ document.addEventListener("DOMContentLoaded", function () {
       if (paymentStatusField.value === "zero" && paid !== 0) {
         event.preventDefault();
         alert("For zero payment sales, amount paid must be 0.");
-      }
-      const customer = document.getElementById("customer_name")?.value?.trim();
-      if (!customer) {
-        event.preventDefault();
-        alert("Customer name is required for partial/zero payment sales.");
       }
     }
   });
