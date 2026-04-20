@@ -249,6 +249,17 @@ def affiliate_login_view(request):
         if not user.is_affiliate:
             messages.error(request, "This account is not an affiliate account.")
             return render(request, "auth/affiliate_login.html")
+        
+        affiliate_profile = AffiliateProfile.objects.filter(user=user).only(
+            "status",
+            "email_confirmed",
+        ).first()
+        if not affiliate_profile or affiliate_profile.status != "active" or not affiliate_profile.email_confirmed:
+            messages.error(
+                request,
+                "Affiliate profile is not active yet. Please activate your account from the email link.",
+            )
+            return render(request, "auth/affiliate_login.html")
 
         login(request, user)
         return redirect("affiliate_dashboard")

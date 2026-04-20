@@ -153,6 +153,55 @@ class AffiliateRegistrationTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("affiliate_login"), fetch_redirect_response=False)
 
+    def test_affiliate_login_requires_active_affiliate_profile(self):
+        user = User.objects.create_user(
+            email="affiliate.inactive@example.com",
+            username="affiliate.inactive@example.com",
+            password="testpass123",
+            full_name="Affiliate Inactive",
+            phone="1234567890",
+            is_active=True,
+            is_email_verified=True,
+            onboarding_status="active",
+            is_affiliate=True,
+            role="user",
+            is_staff=False,
+        )
+
+        response = self.client.post(
+            reverse("affiliate_login"),
+            {"email": user.email, "password": "testpass123"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Affiliate profile is not active yet")
+
+    def test_affiliate_login_allows_active_affiliate_profile(self):
+        user = User.objects.create_user(
+            email="affiliate.active@example.com",
+            username="affiliate.active@example.com",
+            password="testpass123",
+            full_name="Affiliate Active",
+            phone="1234567890",
+            is_active=True,
+            is_email_verified=True,
+            onboarding_status="active",
+            is_affiliate=True,
+            role="user",
+            is_staff=False,
+        )
+        AffiliateProfile.objects.filter(user=user).update(status="active", email_confirmed=True)
+
+        response = self.client.post(
+            reverse("affiliate_login"),
+            {"email": user.email, "password": "testpass123"},
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("affiliate_dashboard"), fetch_redirect_response=False)
+
     def test_company_registration_can_optionally_attach_affiliate(self):
         affiliate_user = User.objects.create_user(
             email="agent@example.com",
