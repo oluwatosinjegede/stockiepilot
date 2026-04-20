@@ -24,6 +24,10 @@
         class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition">
         + Add Category
       </button>
+      <a href="{% url 'create_supplier' %}"
+        class="bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition">
+        + Add Supplier
+      </a>
       <button onclick="openModal()"
         class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
         + Add Product
@@ -125,6 +129,12 @@
               {% csrf_token %}
               <input type="hidden" name="action" value="add_stock">
               <input type="hidden" name="product_id" value="{{ p.id }}">
+              <select name="supplier" class="p-1 border rounded-lg dark:bg-slate-700 text-xs">
+                <option value="">Supplier</option>
+                {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+              </select>
+              <input type="text" name="supplier_invoice_number" placeholder="Invoice #" class="w-28 p-1 border rounded-lg dark:bg-slate-700 text-xs">
+              <input type="date" name="date_supplied" value="{{ today|date:'Y-m-d' }}" class="p-1 border rounded-lg dark:bg-slate-700 text-xs">
               <input
                 type="number"
                 name="stock_quantity"
@@ -193,6 +203,18 @@
       <textarea name="description" rows="2"
         placeholder="Description"
         class="w-full p-2 border rounded-lg dark:bg-slate-700"></textarea>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <select name="supplier" class="w-full p-2 border rounded-lg dark:bg-slate-700">
+          <option value="">Select Supplier (optional)</option>
+          {% for s in suppliers %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="supplier_invoice_number" placeholder="Supplier Invoice Number" class="p-2 border rounded-lg dark:bg-slate-700">
+      </div>
+
+      <input type="date" name="date_supplied" value="{{ today|date:'Y-m-d' }}" class="w-full p-2 border rounded-lg dark:bg-slate-700">
 
       <div class="grid grid-cols-2 gap-3">
         <input name="quantity" type="number" required min="0"

@@ -60,7 +60,9 @@
             {{ debt_sale.customer_name|default:"Walk-in Customer" }} — Paid: ₦{{ debt_sale.amount_paid|floatformat:2 }} |
             Balance: ₦{{ debt_sale.balance|floatformat:2 }} ({{ debt_sale.created_at|date:"M d, Y H:i" }})
           </p>
-
+          <div class="text-xs">
+            <a class="text-indigo-600" href="{% url 'sale_invoice_detail' debt_sale.id %}">View Invoice</a>
+          </div>
           <form method="post" action="{% url 'update_sale_payment' debt_sale.id %}" class="flex items-center gap-2">
             {% csrf_token %}
             <input
@@ -118,7 +120,7 @@
           <th class="p-3 text-left">Balance</th>
           <th class="p-3 text-left">Customer</th>
           <th class="p-3 text-left">Status</th>
-          <th class="p-3 text-left">Date</th>
+          <th class="p-3 text-left">Date</th><th class="p-3 text-left">Docs</th>
         </tr>
       </thead>
 
@@ -147,10 +149,13 @@
             </span>
           </td>
           <td class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ item.sale.created_at|date:"M d, Y H:i" }}</td>
+          <td class="p-3 text-xs">
+            <a href="{% url 'sale_invoice_detail' item.sale.id %}" class="text-indigo-600">Invoice</a>
+          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="8" class="p-10 text-center text-slate-400">No sales recorded yet</td>
+          <td colspan="9" class="p-10 text-center text-slate-400">No sales recorded yet</td>
         </tr>
         {% endfor %}
       </tbody>

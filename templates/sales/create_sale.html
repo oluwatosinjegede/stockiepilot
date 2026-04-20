@@ -57,9 +57,11 @@
         <select id="payment_status" name="payment_status" class="w-full border p-2 rounded-lg bg-white dark:bg-slate-900">
           <option value="paid">Paid in Full</option>
           <option value="partial">Part Payment</option>
+          <option value="zero">Zero Payment</option>
         </select>
 
         <div id="partial-payment-fields" class="hidden space-y-2">
+          <input type="text" name="payment_method" id="payment_method" class="w-full border p-2 rounded-lg bg-white dark:bg-slate-900" placeholder="Payment method (cash, transfer, card)">
           <input type="text" name="customer_name" id="customer_name" class="w-full border p-2 rounded-lg bg-white dark:bg-slate-900" placeholder="Customer name">
           <input type="number" step="0.01" min="0" name="amount_paid" id="amount_paid" class="w-full border p-2 rounded-lg bg-white dark:bg-slate-900" placeholder="Amount paid">
           <div class="flex justify-between text-sm">
@@ -180,12 +182,21 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (paymentStatusField.value === "partial") {
+    if (paymentStatusField.value === "partial" || paymentStatusField.value === "zero") {
       const paid = parseFloat(amountPaidField?.value || "0") || 0;
       const total = parseFloat(totalField.value || "0") || 0;
-      if (paid <= 0 || paid > total) {
+      if (paymentStatusField.value === "partial" && (paid <= 0 || paid >= total)) {
         event.preventDefault();
-        alert("For part payment, enter an amount greater than 0 and not more than the total.");
+        alert("For part payment, enter an amount greater than 0 and less than the total.");
+      }
+      if (paymentStatusField.value === "zero" && paid !== 0) {
+        event.preventDefault();
+        alert("For zero payment sales, amount paid must be 0.");
+      }
+      const customer = document.getElementById("customer_name")?.value?.trim();
+      if (!customer) {
+        event.preventDefault();
+        alert("Customer name is required for partial/zero payment sales.");
       }
     }
   });
@@ -238,7 +249,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function togglePartialFields() {
-    const isPartial = paymentStatusField.value === "partial";
+    const isPartial = paymentStatusField.value === "partial" || paymentStatusField.value === "zero";
     partialPaymentFields?.classList.toggle("hidden", !isPartial);
     calculateBalance();
   }

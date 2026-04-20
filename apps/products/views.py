@@ -1,17 +1,18 @@
 import json
-from decimal import Decimal, InvalidOperation
-import uuid
 from collections import defaultdict
+from datetime import date
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.timezone import now, timedelta
 
-from .models import Category, Product
+from .models import Category, Product, Supplier
+from .services.procurement import create_product_with_supply, create_supplier, record_product_supply
 from apps.sales.models import SaleItem
 from apps.subscriptions.services import can_create_product
 
@@ -21,6 +22,12 @@ def _redirect_affiliate_if_needed(request):
         messages.error(request, "Affiliate accounts cannot access Products.")
         return redirect("affiliate_dashboard")
     return None
+
+def _require_inventory_role(request):
+    if request.user.role not in ["owner", "staff"]:
+        messages.error(request, "Permission denied.")
+        return False
+    return True
 
 @login_required
 def products_view(request):
@@ -35,15 +42,12 @@ def products_view(request):
 
     if request.method == "POST":
 
-        if request.user.role not in ["owner", "staff"]:
-            messages.error(request, "Permission denied.")
+        if not _require_inventory_role(request):
             return redirect("products")
 
         action = request.POST.get("action")
-
         if action == "create_category":
             return _create_category(request)
-        
         if action == "add_stock":
             return _add_stock(request, company)
 
@@ -51,10 +55,8 @@ def products_view(request):
 
     products = Product.objects.filter(company=company).select_related("category").order_by("-id")
 
-    try:
-        categories = Category.objects.all()
-    except:
-        categories = []
+    categories = Category.objects.all()
+    suppliers = Supplier.objects.filter(company=company, is_active=True).order_by("name")
 
     analytics = _build_product_analytics(products)
 
@@ -64,16 +66,50 @@ def products_view(request):
         {
             "products": products,
             "categories": categories,
+            "suppliers": suppliers,
+            "today": date.today(),
             **analytics,
         },
     )
 
+@login_required
+def supplier_list_view(request):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
+    company = getattr(request.user, "company", None)
+    if not company:
+        messages.error(request, "No company assigned.")
+        return redirect("dashboard")
 
-# =========================
-# CREATE PRODUCT (FIXED)
-# =========================
+    suppliers = Supplier.objects.filter(company=company).order_by("name")
+    return render(request, "products/suppliers.html", {"suppliers": suppliers})
+
+
+@login_required
+def create_supplier_view(request):
+    affiliate_redirect = _redirect_affiliate_if_needed(request)
+    if affiliate_redirect:
+        return affiliate_redirect
+    company = getattr(request.user, "company", None)
+    if not company:
+        messages.error(request, "No company assigned.")
+        return redirect("dashboard")
+    if not _require_inventory_role(request):
+        return redirect("products")
+
+    if request.method == "POST":
+        try:
+            create_supplier(company, request.POST)
+            messages.success(request, "Supplier created successfully.")
+            return redirect("suppliers")
+        except ValidationError as exc:
+            messages.error(request, str(exc))
+
+    return render(request, "products/create_supplier.html")
+
+
 def _create_product(request, company):
-    
     if not can_create_product(company):
         messages.error(
             request,
@@ -81,110 +117,45 @@ def _create_product(request, company):
         )
         return redirect("subscription")
 
-    # FORM DATA
-    name = request.POST.get("name", "").strip()
-    price = request.POST.get("price")
-    quantity = request.POST.get("quantity")
-    category_id = request.POST.get("category")
-    description = request.POST.get("description", "").strip()
-    cost_price = request.POST.get("cost_price")
-    sku_input = request.POST.get("sku")  # FIXED
-
-    if not name or not price or not quantity:
-        messages.error(request, "All fields are required.")
-        return redirect("products")
-
     try:
-        price = Decimal(price)
-        quantity = int(quantity)
-        cost_price = Decimal(cost_price) if cost_price else price
-    except:
-        messages.error(request, "Invalid numbers.")
-        return redirect("products")
-
-    category = Category.objects.filter(id=category_id).first() if category_id else None
-
-    existing_product = Product.objects.filter(company=company, name__iexact=name).first()
-    if existing_product:
-        existing_product.quantity = (existing_product.quantity or 0) + quantity
-        existing_product.selling_price = price
-        existing_product.cost_price = cost_price
-        if category:
-            existing_product.category = category
-        if description:
-            existing_product.description = description
-        existing_product.save(
-            update_fields=[
-                "quantity",
-                "selling_price",
-                "cost_price",
-                "category",
-                "description",
-            ]
+        product, supply = create_product_with_supply(
+            company=company,
+            user=request.user,
+            product_data=request.POST,
+            supply_data=request.POST,
         )
         messages.success(
             request,
-            f"Added {quantity} unit(s) to {existing_product.name}. Current stock: {existing_product.quantity}.",
+            f"Product created with opening supply of {supply.quantity_supplied} units for {product.name}.",
         )
-        return redirect("products")
-
-    # SKU
-    sku = sku_input.strip() if sku_input else f"SKU-{company.id}-{uuid.uuid4().hex[:6]}"
-
-    while Product.objects.filter(company=company, sku=sku).exists():
-        sku = f"SKU-{company.id}-{uuid.uuid4().hex[:6]}"
-
-    try:
-        Product.objects.create(
-            company=company,
-            name=name,
-            category=category,
-            description=description,
-            selling_price=price,
-            cost_price=cost_price,
-            quantity=quantity,
-            sku=sku,
-        )
-    except IntegrityError:
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+    except Exception:
         messages.error(request, "Error saving product.")
-        return redirect("products")
+     
 
-    messages.success(request, "Product created.")
     return redirect("products")
 
 def _add_stock(request, company):
     product_id = request.POST.get("product_id")
-    quantity_input = request.POST.get("stock_quantity", "").strip()
-
-    if not product_id:
-        messages.error(request, "Product is required.")
-        return redirect("products")
-
-    try:
-        quantity_to_add = int(quantity_input)
-        if quantity_to_add <= 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        messages.error(request, "Enter a valid stock quantity greater than 0.")
-        return redirect("products")
 
     product = Product.objects.filter(id=product_id, company=company).first()
     if not product:
         messages.error(request, "Product not found.")
         return redirect("products")
 
-    product.quantity = (product.quantity or 0) + quantity_to_add
-    product.save(update_fields=["quantity"])
+    try:
+        supply = record_product_supply(company, request.user, product, request.POST)
+        messages.success(
+            request,
+            f"Added {supply.quantity_supplied} unit(s) to {product.name}. Current stock: {product.quantity}.",
+        )
+    except ValidationError as exc:
+        messages.error(request, str(exc))
 
-    messages.success(
-        request,
-        f"Added {quantity_to_add} unit(s) to {product.name}. Current stock: {product.quantity}.",
-    )
     return redirect("products")
 
-# =========================
-# CATEGORY
-# =========================
+
 def _create_category(request):
     name = request.POST.get("category_name", "").strip()
 
@@ -201,11 +172,7 @@ def _create_category(request):
     return redirect("products")
 
 
-# =========================
-# SAFE ANALYTICS (NO ORM CRASH)
-# =========================
 def _build_product_analytics(products):
-
     total_products = products.count()
     low_stock_count = 0
     inventory_value = 0
@@ -245,8 +212,10 @@ def _build_product_analytics(products):
         stock_levels.append(cumulative)
 
     sales_snapshot = (
-        SaleItem.objects
-        .filter(product__company=products.first().company if total_products else None, sale__created_at__gte=date_from)
+        SaleItem.objects.filter(
+            product__company=products.first().company if total_products else None,
+            sale__created_at__gte=date_from,
+        )
         .values("product__name")
         .annotate(total_qty=Sum("quantity"), total_revenue=Sum("total_price"))
         .order_by("-total_revenue")[:5]
@@ -279,18 +248,13 @@ def _build_product_analytics(products):
             "trend_values": json.dumps(stock_levels),
             "product_labels": json.dumps([p.name for p in top_products]),
             "product_values": json.dumps([p.quantity or 0 for p in top_products]),
-            "pie_values": json.dumps([
-                max(total_products - low_stock_count - out_of_stock_count, 0),
-                low_stock_count,
-                out_of_stock_count,
-            ]),
+            "pie_values": json.dumps(
+                [max(total_products - low_stock_count - out_of_stock_count, 0), low_stock_count, out_of_stock_count]
+            ),
         },
     }
 
 
-# =========================
-# AJAX
-# =========================
 @login_required
 def get_product_price(request, product_id):
     affiliate_redirect = _redirect_affiliate_if_needed(request)
@@ -301,15 +265,8 @@ def get_product_price(request, product_id):
 
     product = get_object_or_404(Product, id=product_id, company=company)
 
-    return JsonResponse({
-        "price": float(product.selling_price or 0),
-        "stock": product.quantity or 0
-    })
+    return JsonResponse({"price": float(product.selling_price or 0), "stock": product.quantity or 0})
 
-
-# =========================
-# EDIT
-# =========================
 @login_required
 def edit_product(request, product_id):
     affiliate_redirect = _redirect_affiliate_if_needed(request)
@@ -326,10 +283,7 @@ def edit_product(request, product_id):
             if not name:
                 raise ValueError("name_required")
 
-            duplicate_exists = Product.objects.filter(
-                company=company,
-                name__iexact=name
-            ).exclude(id=product.id).exists()
+            duplicate_exists = Product.objects.filter(company=company, name__iexact=name).exclude(id=product.id).exists()
 
             if duplicate_exists:
                 messages.error(request, "A product with this name already exists.")
@@ -344,17 +298,13 @@ def edit_product(request, product_id):
 
             messages.success(request, "Updated.")
 
-        except:
+        except Exception:
             messages.error(request, "Invalid data.")
 
         return redirect("products")
 
     return render(request, "products/edit.html", {"product": product})
 
-
-# =========================
-# DELETE
-# =========================
 @login_required
 def delete_product(request, product_id):
     affiliate_redirect = _redirect_affiliate_if_needed(request)

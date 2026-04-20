@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+  <div class="flex justify-between items-start mb-4">
+    <div><h1 class="text-2xl font-bold">Invoice</h1><p class="text-sm text-slate-500">{{ invoice.invoice_number }}</p></div>
+    <button onclick="window.print()" class="px-3 py-2 rounded bg-indigo-600 text-white">Print</button>
+  </div>
+  <p><strong>Company:</strong> {{ sale.company.name }}</p>
+  <p><strong>Customer:</strong> {{ sale.customer_name|default:'Walk-in Customer' }}</p>
+  <p><strong>Date:</strong> {{ sale.created_at|date:"M d, Y H:i" }}</p>
+  <table class="w-full mt-4 text-sm"><thead><tr class="border-b"><th class="text-left py-2">Item</th><th class="text-left">Qty</th><th class="text-left">Unit Price</th><th class="text-left">Total</th></tr></thead><tbody>
+    {% for item in sale.items.all %}<tr class="border-b"><td class="py-2">{{ item.product.name }}</td><td>{{ item.quantity }}</td><td>₦{{ item.unit_price|floatformat:2 }}</td><td>₦{{ item.total_price|floatformat:2 }}</td></tr>{% endfor %}
+  </tbody></table>
+  <div class="mt-4 space-y-1 text-right">
+    <p>Total: <strong>₦{{ sale.total_amount|floatformat:2 }}</strong></p>
+    <p>Amount Paid: <strong>₦{{ sale.amount_paid|floatformat:2 }}</strong></p>
+    <p>Balance Due: <strong>₦{{ sale.balance|floatformat:2 }}</strong></p>
+    <p>Status: <strong>{{ sale.payment_status|title }}</strong></p>
+  </div>
+</div>
+{% endblock %}

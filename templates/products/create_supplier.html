@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-semibold">Add Supplier</h2>
+    <a href="{% url 'products' %}" class="text-sm text-indigo-600">Back to Products</a>
+  </div>
+
+  <form method="post" class="space-y-3">
+    {% csrf_token %}
+    <input name="name" required placeholder="Supplier Name" class="w-full p-2 border rounded-lg dark:bg-slate-700">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <input name="contact_person" placeholder="Contact Person" class="p-2 border rounded-lg dark:bg-slate-700">
+      <input name="phone" placeholder="Phone" class="p-2 border rounded-lg dark:bg-slate-700">
+    </div>
+    <input type="email" name="email" placeholder="Email" class="w-full p-2 border rounded-lg dark:bg-slate-700">
+    <textarea name="address" rows="2" placeholder="Address" class="w-full p-2 border rounded-lg dark:bg-slate-700"></textarea>
+    <textarea name="notes" rows="3" placeholder="Notes" class="w-full p-2 border rounded-lg dark:bg-slate-700"></textarea>
+    <button class="bg-indigo-600 text-white px-4 py-2 rounded-lg">Create Supplier</button>
+  </form>
+</div>
+{% endblock %}
