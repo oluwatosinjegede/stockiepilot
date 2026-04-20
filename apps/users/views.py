@@ -552,7 +552,7 @@ def create_user_view(request):
         )
 
         messages.success(request, "User created successfully.")
-         return redirect("dashboard")
+        return redirect("dashboard")
 
 @login_required
 def profile_view(request):
