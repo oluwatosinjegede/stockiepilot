@@ -46,38 +46,38 @@ def create_sale(request):
         return redirect("subscription")
 
     if request.method == "POST":
-            product_ids = [v for v in request.POST.getlist("product[]") if v]
-            quantities = [v for v in request.POST.getlist("quantity[]") if v]
-            if not product_ids or not quantities or len(product_ids) != len(quantities):
-                messages.error(request, "Each selected product must have a quantity.")
-                return redirect("create_sale")
+        product_ids = [v for v in request.POST.getlist("product[]") if v]
+        quantities = [v for v in request.POST.getlist("quantity[]") if v]
+        if not product_ids or not quantities or len(product_ids) != len(quantities):
+            messages.error(request, "Each selected product must have a quantity.")
+            return redirect("create_sale")
+        
+        items = []
+        try:
+            for product_id, quantity in zip(product_ids, quantities):
+                product = get_object_or_404(Product, id=product_id, company=company)
+                qty = int(quantity)
+                items.append({"product": product, "quantity": qty})
 
-            items = []
+        
 
-            try:
-                for product_id, quantity in zip(product_ids, quantities):
-                    product = get_object_or_404(Product, id=product_id, company=company)
-                    qty = int(quantity)
-                    items.append({"product": product, "quantity": qty})
-
-                    sale, invoice, receipt = create_sale_with_payment(
+            sale, invoice, receipt = create_sale_with_payment(
                 company=company,
                 user=request.user,
                 sale_data=request.POST,
                 items_data=items,
             )
-            except (ValidationError, ValueError) as exc:
-                messages.error(request, str(exc))
-                return redirect("create_sale")
-            except Exception as exc:
-                messages.error(request, f"Error creating sale: {exc}")
-
-                
+        except (ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+            return redirect("create_sale")
+        except Exception as exc:
+            messages.error(request, f"Error creating sale: {exc}")
+            return redirect("create_sale")
+        
+        if sale.balance > 0:
+            messages.warning(request, f"Sale created. Outstanding balance: ₦{sale.balance}")
             return redirect("create_sale")
 
-    if sale.balance > 0:
-        messages.warning(request, f"Sale created. Outstanding balance: ₦{sale.balance}")
-    else:
         messages.success(request, "Sale completed successfully")
         if receipt:
             return redirect("payment_receipt_detail", receipt_id=receipt.id)
