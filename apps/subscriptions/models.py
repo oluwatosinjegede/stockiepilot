@@ -1,18 +1,18 @@
-from django.utils import timezone
 from datetime import timedelta
+
 from django.db import models
+from django.utils import timezone
+
+from .constants import BillingCycle, PLAN_DEFINITIONS, Plans
 
 class SubscriptionPlan(models.Model):
+    """Legacy plan model retained for backward compatibility."""
 
-    BILLING_CHOICES = (
-        ('monthly', 'Monthly'),
-        ('yearly', 'Yearly'),
-    )
+    BILLING_CHOICES = ((BillingCycle.MONTHLY, "Monthly"), (BillingCycle.ANNUAL, "Annual"))
 
     name = models.CharField(max_length=100, unique=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    billing_cycle = models.CharField(max_length=10, choices=BILLING_CHOICES)
-
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    billing_cycle = models.CharField(max_length=10, choices=BILLING_CHOICES, default=BillingCycle.MONTHLY)
     max_products = models.IntegerField(default=100)
     max_users = models.IntegerField(default=5)
 
@@ -21,54 +21,55 @@ class SubscriptionPlan(models.Model):
     def __str__(self):
         return self.name
     
+
 class Subscription(models.Model):
+    STATUS_TRIALING = "trialing"
+    STATUS_ACTIVE = "active"
+    STATUS_PAST_DUE = "past_due"
+    STATUS_EXPIRED = "expired"
+    STATUS_CANCELED = "canceled"
 
     STATUS_CHOICES = (
-        ('trial', 'Trial'),
-        ('active', 'Active'),
-        ('past_due', 'Past Due'),
-        ('expired', 'Expired'),
-        ('cancelled', 'Cancelled'),
+        (STATUS_TRIALING, "Trialing"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_PAST_DUE, "Past Due"),
+        (STATUS_EXPIRED, "Expired"),
+        (STATUS_CANCELED, "Canceled"),
     )
 
-    BILLING_CYCLE = (
-        ('monthly', 'Monthly'),
-        ('yearly', 'Yearly'),
+    BILLING_CYCLE_CHOICES = (
+        (BillingCycle.MONTHLY, "Monthly"),
+        (BillingCycle.ANNUAL, "Annual"),
     )
 
-    company = models.ForeignKey(
-        'companies.Company',
-        on_delete=models.CASCADE,
-        related_name='subscriptions'
-    )
-
-    #  FIXED: correct app reference
+    company = models.ForeignKey("companies.Company", on_delete=models.CASCADE, related_name="subscriptions")
+    plan_name = models.CharField(max_length=20, choices=[(p, p.title()) for p in Plans.CHOICES], default=Plans.FREE)
     plan = models.ForeignKey(
-        'subscriptions.SubscriptionPlan',
+        "subscriptions.SubscriptionPlan",
         on_delete=models.PROTECT,
-        related_name='subscriptions'
+        related_name="subscriptions",
+        null=True,
+        blank=True,
     )
 
-    #plan = models.ForeignKey('subscriptions.SubscriptionPlan', on_delete=models.PROTECT)
+    billing_cycle = models.CharField(max_length=10, choices=BILLING_CYCLE_CHOICES, default=BillingCycle.MONTHLY)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_TRIALING)
+    auto_renew = models.BooleanField(default=False)
 
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='trial'
-    )
+    started_at = models.DateTimeField(default=timezone.now)
+    current_period_start = models.DateTimeField(null=True, blank=True)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    trial_start = models.DateTimeField(null=True, blank=True)
+    trial_end = models.DateTimeField(null=True, blank=True)
+    upgraded_at = models.DateTimeField(null=True, blank=True)
+    canceled_at = models.DateTimeField(null=True, blank=True)
 
-    billing_cycle = models.CharField(
-        max_length=10,
-        choices=BILLING_CYCLE,
-        default='monthly'
-    )
+    # legacy fields maintained during transition
 
     start_date = models.DateTimeField(default=timezone.now)
 
-    #  FIX: allow null initially (avoid migration issues)
     end_date = models.DateTimeField(null=True, blank=True)
-
-    auto_renew = models.BooleanField(default=True)
 
     trial_end_date = models.DateTimeField(null=True, blank=True)
 
@@ -77,65 +78,81 @@ class Subscription(models.Model):
 
     class Meta:
         db_table = "subscriptions"
-        indexes = [
-            models.Index(fields=['company']),
-            models.Index(fields=['status']),
-        ]
-        ordering = ['-created_at']
-
-    # =========================
-    # BUSINESS LOGIC METHODS
-    # =========================
-
-    def is_active(self):
-        return (
-            self.status == 'active'
-            and self.end_date
-            and self.end_date >= timezone.now()
-        )
-
-    def is_trial(self):
-        return (
-            self.status == 'trial'
-            and self.trial_end_date
-            and self.trial_end_date >= timezone.now()
-        )
-
-    def has_expired(self):
-        return self.end_date and self.end_date < timezone.now()
-
-    def activate(self):
-        """Activate subscription after payment"""
-        self.status = 'active'
-        self.start_date = timezone.now()
-        self.set_end_date()
-        self.save()
-
-    def set_end_date(self):
-        """Automatically set end date based on billing cycle"""
-        if self.billing_cycle == 'monthly':
-            self.end_date = timezone.now() + timedelta(days=30)
-        else:
-            self.end_date = timezone.now() + timedelta(days=365)
-
-    def extend_subscription(self):
-        """Extend existing subscription"""
-        if not self.end_date:
-            self.set_end_date()
-        else:
-            if self.billing_cycle == 'monthly':
-                self.end_date += timedelta(days=30)
-            else:
-                self.end_date += timedelta(days=365)
-
-        self.status = 'active'
-        self.save()
-
-    def mark_expired(self):
-        """Mark subscription as expired"""
-        if self.has_expired():
-            self.status = 'expired'
-            self.save()
+        indexes = [models.Index(fields=["company"]), models.Index(fields=["status"])]
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.company.name} - {self.plan.name}"
+        return f"{self.company.name} - {self.plan_name}"
+    
+    @property
+    def is_trial(self):
+        return self.status == self.STATUS_TRIALING and self.trial_end and self.trial_end >= timezone.now()
+
+    @property
+    def is_active(self):
+        now = timezone.now()
+        if self.status == self.STATUS_ACTIVE and self.current_period_end and self.current_period_end >= now:
+            return True
+        if self.status == self.STATUS_TRIALING and self.trial_end and self.trial_end >= now:
+            return True
+        return False
+
+    def mark_expired(self):
+        self.status = self.STATUS_EXPIRED
+        self.auto_renew = False
+        self.current_period_end = self.current_period_end or timezone.now()
+        self.end_date = self.current_period_end
+        self.save(update_fields=["status", "auto_renew", "current_period_end", "end_date", "updated_at"])
+
+    def set_period_dates(self, start_at=None):
+        start_at = start_at or timezone.now()
+        self.current_period_start = start_at
+        if self.billing_cycle == BillingCycle.ANNUAL:
+            self.current_period_end = start_at + timedelta(days=365)
+        else:
+            self.current_period_end = start_at + timedelta(days=30)
+        self.start_date = self.started_at
+        self.end_date = self.current_period_end
+
+    def renew(self, payment_success=True):
+        if not self.auto_renew or self.status == self.STATUS_CANCELED:
+            return self
+
+        if not payment_success:
+            self.status = self.STATUS_PAST_DUE
+            self.save(update_fields=["status", "updated_at"])
+            return self
+
+        start_at = self.current_period_end or timezone.now()
+        self.set_period_dates(start_at=start_at)
+        self.status = self.STATUS_ACTIVE
+        self.save(update_fields=[
+            "current_period_start",
+            "current_period_end",
+            "start_date",
+            "end_date",
+            "status",
+            "updated_at",
+        ])
+        return self
+
+    def sync_legacy_dates(self):
+        self.start_date = self.started_at
+        self.end_date = self.current_period_end
+        self.trial_end_date = self.trial_end
+
+
+
+def _ensure_plan_records(sender, **kwargs):
+    for plan_name, meta in PLAN_DEFINITIONS.items():
+        SubscriptionPlan.objects.get_or_create(
+            name=plan_name,
+            defaults={
+                "price": meta["monthly"],
+                "billing_cycle": BillingCycle.MONTHLY,
+                "max_products": meta["max_products"] or 999999,
+                "max_users": 999,
+            },
+        )
+
+models.signals.post_migrate.connect(_ensure_plan_records)

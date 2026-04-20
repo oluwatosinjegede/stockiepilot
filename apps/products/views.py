@@ -13,14 +13,8 @@ from django.utils.timezone import now, timedelta
 
 from .models import Category, Product
 from apps.sales.models import SaleItem
+from apps.subscriptions.services import can_create_product
 
-
-PLAN_LIMITS = {
-    "free": 10,
-    "basic": 50,
-    "pro": None,
-    "enterprise": None,
-}
 
 def _redirect_affiliate_if_needed(request):
     if request.user.is_affiliate:
@@ -79,19 +73,12 @@ def products_view(request):
 # CREATE PRODUCT (FIXED)
 # =========================
 def _create_product(request, company):
-
-    # SAFE SUBSCRIPTION
-    subscription = getattr(company, "subscription", None)
-
-    if subscription and getattr(subscription, "plan", None):
-        plan_name = subscription.plan.name.lower()
-    else:
-        plan_name = "free"
-
-    limit = PLAN_LIMITS.get(plan_name, 10)
-
-    if limit is not None and Product.objects.filter(company=company).count() >= limit:
-        messages.error(request, "Plan limit reached.")
+    
+    if not can_create_product(company):
+        messages.error(
+            request,
+            "Product limit reached for your current plan or your subscription is inactive. Upgrade to continue.",
+        )
         return redirect("subscription")
 
     # FORM DATA
@@ -101,7 +88,7 @@ def _create_product(request, company):
     category_id = request.POST.get("category")
     description = request.POST.get("description", "").strip()
     cost_price = request.POST.get("cost_price")
-    sku_input = request.POST.get("sku")  # ✅ FIXED
+    sku_input = request.POST.get("sku")  # FIXED
 
     if not name or not price or not quantity:
         messages.error(request, "All fields are required.")

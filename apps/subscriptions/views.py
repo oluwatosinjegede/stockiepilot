@@ -1,18 +1,16 @@
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
 from django.contrib import messages
 
-from .services.paystack import (
-    initialize_paystack_payment,
-    verify_paystack_payment,
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect, render
+from django.utils import timezone
+
+from .constants import BillingCycle, PLAN_DEFINITIONS, Plans
+from .services import (
+    get_company_subscription,
+    get_plan_features,
+    is_subscription_active,
+    upgrade_subscription,
 )
-from .constants import Plans
-
-
-# =========================
-# HELPERS
-# =========================
 
 def get_user_company(user):
     return getattr(user, "company", None)
@@ -21,10 +19,8 @@ def get_user_company(user):
 def validate_plan(plan):
     return plan in Plans.CHOICES
 
-
-# =========================
-# SUBSCRIPTION PAGE
-# =========================
+def validate_billing_cycle(cycle):
+    return cycle in BillingCycle.CHOICES
 
 @login_required
 def subscription_view(request):
@@ -41,21 +37,46 @@ def subscription_view(request):
     if not company:
         messages.error(request, "No company linked to your account.")
         return redirect("dashboard")
+    
+    selected_cycle = request.GET.get("billing_cycle", BillingCycle.MONTHLY)
+    if not validate_billing_cycle(selected_cycle):
+        selected_cycle = BillingCycle.MONTHLY
+
+    subscription = get_company_subscription(company)
+    active = is_subscription_active(company)
+
+    now = timezone.now()
+    trial_days_remaining = 0
+    if subscription.trial_end and subscription.status == "trialing":
+        trial_days_remaining = max((subscription.trial_end - now).days, 0)
+
+    plan_cards = []
+    for plan_name in Plans.CHOICES:
+        features = get_plan_features(plan_name)
+        plan_cards.append(
+            {
+                "key": plan_name,
+                "label": Plans.LABELS[plan_name],
+                "monthly": features["monthly"],
+                "annual": features["annual"],
+                "features": features,
+            }
+        )
 
     return render(
         request,
         "subscription.html",
         {
-            "current_plan": company.subscription_plan,
-            "plans": Plans.CHOICES,
-            "plan_labels": Plans.LABELS,
+            "current_plan": subscription.plan_name,
+            "subscription": subscription,
+            "plan_cards": plan_cards,
+            "selected_billing_cycle": selected_cycle,
+            "trial_days_remaining": trial_days_remaining,
+            "trial_expired": subscription.status in {"expired", "past_due"} and not active,
+            "is_active": active,
+            "pricing": PLAN_DEFINITIONS,
         },
     )
-
-
-# =========================
-# SUBSCRIBE / CHANGE PLAN
-# =========================
 
 @login_required
 def subscribe(request, plan):
@@ -73,107 +94,24 @@ def subscribe(request, plan):
         messages.error(request, "No company linked to your account.")
         return redirect("dashboard")
 
-    #  Validate plan
     if not validate_plan(plan):
         messages.error(request, "Invalid subscription plan.")
         return redirect("subscription")
 
-    #  Prevent redundant updates
-    if company.subscription_plan == plan:
-        messages.info(
-            request,
-            f"You are already on the {Plans.LABELS.get(plan, plan)} plan.",
-        )
+    billing_cycle = request.POST.get("billing_cycle") or request.GET.get("billing_cycle") or BillingCycle.MONTHLY
+    if not validate_billing_cycle(billing_cycle):
+        messages.error(request, "Invalid billing cycle.")
         return redirect("subscription")
 
-    #  Handle FREE plan (no payment required)
     if plan == Plans.FREE:
-        company.subscription_plan = plan
-        company.save(update_fields=["subscription_plan"])
-
-        messages.success(request, "Switched to Free plan.")
+        messages.error(request, "Free plan is only available as an onboarding trial.")
         return redirect("subscription")
 
-    # Initialize Paystack payment
-    try:
-        payment_url = initialize_paystack_payment(
-            email=request.user.email,
-            amount=Plans.PRICES.get(plan),
-            metadata={
-                "user_id": request.user.id,
-                "plan": plan,
-            },
-        )
-    except Exception as e:
-        messages.error(request, "Unable to initialize payment. Try again.")
-        return redirect("subscription")
-
-    return redirect(payment_url)
-
-
-# =========================
-# PAYMENT CALLBACK
-# =========================
-
-@login_required
-def payment_callback(request):
-    if request.user.is_affiliate:
-        messages.error(request, "Affiliate accounts cannot access Subscription.")
-        return redirect("affiliate_dashboard")
-
-    if request.user.role == "user":
-        messages.error(request, "Company users can only access the Sales module.")
-        return redirect("sales")
-    
-    reference = request.GET.get("reference")
-
-    if not reference:
-        messages.error(request, "Missing payment reference.")
-        return redirect("subscription")
-
-    try:
-        result = verify_paystack_payment(reference)
-    except Exception:
-        messages.error(request, "Payment verification failed.")
-        return redirect("subscription")
-
-    # Validate Paystack response
-    if not result.get("status"):
-        messages.error(request, "Payment not successful.")
-        return redirect("subscription")
-
-    data = result.get("data", {})
-    metadata = data.get("metadata", {})
-
-    plan = metadata.get("plan")
-    user_id = metadata.get("user_id")
-
-    # SECURITY VALIDATIONS
-    if not validate_plan(plan):
-        messages.error(request, "Invalid plan in payment data.")
-        return redirect("subscription")
-
-    if user_id != request.user.id:
-        messages.error(request, "User mismatch detected.")
-        return redirect("subscription")
-
-    expected_amount = Plans.PRICES.get(plan)
-    if data.get("amount") != expected_amount:
-        messages.error(request, "Payment amount mismatch.")
-        return redirect("subscription")
-
-    # Apply subscription
-    company = get_user_company(request.user)
-    if not company:
-        messages.error(request, "No company linked to your account.")
-        return redirect("dashboard")
-
-    company.subscription_plan = plan
-    company.save(update_fields=["subscription_plan"])
+    upgraded = upgrade_subscription(company, plan_name=plan, billing_cycle=billing_cycle, auto_renew=True)
 
     messages.success(
         request,
-        f"Successfully activated {Plans.LABELS.get(plan, plan)} plan.",
+        f"Subscription updated to {Plans.LABELS[plan]} ({billing_cycle}). Next renewal: {upgraded.current_period_end.date()}.",
     )
 
     return redirect("subscription")

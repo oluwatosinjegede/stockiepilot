@@ -8,6 +8,7 @@ from django.db import transaction
 from apps.products.models import Product
 from .models import Sale, SaleItem
 from .services.analytics import build_sales_analytics
+from apps.subscriptions.services import can_access_analytics, is_subscription_active
 
 def _redirect_affiliate_if_needed(request):
     if request.user.is_affiliate:
@@ -29,6 +30,10 @@ def create_sale(request):
     if not company:
         messages.error(request, "User is not assigned to a company.")
         return redirect("dashboard")
+    
+    if not is_subscription_active(company):
+        messages.error(request, "Your subscription is inactive or expired. Upgrade required.")
+        return redirect("subscription")
 
     if request.method == "POST":
 
@@ -161,6 +166,10 @@ def sales_view(request):
     if not company:
         messages.error(request, "User is not assigned to a company.")
         return redirect("dashboard")
+    
+    if not is_subscription_active(company):
+        messages.error(request, "Your subscription is inactive or expired. Upgrade required.")
+        return redirect("subscription")
 
     sales = (
         Sale.objects
@@ -178,25 +187,31 @@ def sales_view(request):
 
 
     # ================= SAFE ANALYTICS =================
-    try:
-        analytics = build_sales_analytics(sale_items)
-    except Exception:
-        analytics = {
-            "metrics": {
-                "revenue_30d": 0,
-                "units_30d": 0,
-                "estimated_profit_30d": 0,
-                "average_order_value": 0,
-            },
-            "charts": {
-                "dates": "[]",
-                "revenue": "[]",
-                "product_labels": "[]",
-                "product_values": "[]",
-                "pie_values": "[]",
-            },
-            "insights": []
-        }
+    analytics = {
+        "metrics": {},
+        "charts": {},
+        "insights": [],
+    }
+    if can_access_analytics(company):
+        try:
+            analytics = build_sales_analytics(sale_items)
+        except Exception:
+            analytics = {
+                "metrics": {
+                    "revenue_30d": 0,
+                    "units_30d": 0,
+                    "estimated_profit_30d": 0,
+                    "average_order_value": 0,
+                },
+                "charts": {
+                    "dates": "[]",
+                    "revenue": "[]",
+                    "product_labels": "[]",
+                    "product_values": "[]",
+                    "pie_values": "[]",
+                },
+                "insights": []
+            }
 
     debt_sales = sales.filter(balance__gt=0)
 
@@ -279,6 +294,10 @@ def sales_list(request):
     if not company:
         messages.error(request, "User is not assigned to a company.")
         return redirect("dashboard")
+    
+    if not is_subscription_active(company):
+        messages.error(request, "Your subscription is inactive or expired. Upgrade required.")
+        return redirect("subscription")
 
     sales = (
         Sale.objects

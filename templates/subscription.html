@@ -1,167 +1,73 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<div class="max-w-7xl mx-auto py-10 space-y-10">
-
-  <!-- HEADER -->
+<div class="max-w-7xl mx-auto py-10 space-y-8">
   <div class="text-center">
     <h1 class="text-3xl font-semibold">Choose Your Plan</h1>
-    <p class="text-slate-500 dark:text-slate-400 mt-2">
-      Simple pricing for every business
-    </p>
+    <p class="text-slate-500 dark:text-slate-400 mt-2">Monthly or annual billing, enforced on the backend.</p>
   </div>
 
-  <!-- 🔒 ROLE NOTICE -->
-  {% if request.user.role != "staff" %}
-  <div class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 p-4 rounded-lg text-center">
-    Only staff users can manage subscription plans.
-  </div>
-  {% endif %}
+   {% if subscription.status == "trialing" %}
+    <div class="rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-900/20 p-4">
+      <p class="font-medium">Trial active: {{ trial_days_remaining }} day(s) remaining.</p>
+      <p class="text-sm text-slate-600 dark:text-slate-300">Trial expires on {{ subscription.trial_end|date:"M d, Y" }}. Upgrade before expiry to keep paid features.</p>
 
-  <!-- GRID -->
+    </div>
+
+    {% elif trial_expired %}
+    <div class="rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 p-4">
+      <p class="font-semibold text-red-700 dark:text-red-300">Upgrade Required</p>
+      <p class="text-sm text-red-600 dark:text-red-200">Your free onboarding trial has expired. Paid features are now blocked until you upgrade.</p>
+    </div>
+    {% endif %}
+
+    <div class="flex items-center justify-center gap-3">
+    <a href="?billing_cycle=monthly" class="px-4 py-2 rounded-lg text-sm {% if selected_billing_cycle == 'monthly' %}bg-indigo-600 text-white{% else %}bg-slate-200 dark:bg-slate-700{% endif %}">Monthly</a>
+    <a href="?billing_cycle=annual" class="px-4 py-2 rounded-lg text-sm {% if selected_billing_cycle == 'annual' %}bg-indigo-600 text-white{% else %}bg-slate-200 dark:bg-slate-700{% endif %}">Annual</a>
+  </div>
+
+  <div class="text-center text-sm text-slate-500 dark:text-slate-400">
+    Current plan: <span class="font-semibold">{{ current_plan|title }}</span>
+    {% if subscription.current_period_end %}
+      • Renewal/Expiry: <span class="font-semibold">{{ subscription.current_period_end|date:"M d, Y" }}</span>
+    {% endif %}
+    • Billing cycle: <span class="font-semibold">{{ subscription.billing_cycle|title }}</span>
+  </div>
+
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    {% for plan in plan_cards %}
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+        <h3 class="text-lg font-semibold mb-1">{{ plan.label }}</h3>
+        <h2 class="text-3xl font-bold mb-2">
+          {% if selected_billing_cycle == 'annual' %}
+            ₦{{ plan.annual }}/yr
+          {% else %}
+            ₦{{ plan.monthly }}/mo
+          {% endif %}
+        </h2>
+        <ul class="space-y-2 text-sm text-slate-500 mb-6">
+          <li>Products: {% if plan.features.max_products %}Up to {{ plan.features.max_products }}{% else %}Unlimited{% endif %}</li>
+          <li>Analytics: {{ plan.features.analytics_level|title }}</li>
+          <li>Reports: {{ plan.features.reports_access|title }}</li>
+          <li>Email notifications: {% if plan.features.email_notifications %}Yes{% else %}No{% endif %}</li>
+          <li>Inventory alerts: {% if plan.features.inventory_alerts %}Yes{% else %}No{% endif %}</li>
+          <li>Multi-branch: {% if plan.features.multi_branch %}Yes{% else %}No{% endif %}</li>
+          <li>Priority support: {% if plan.features.priority_support %}Yes{% else %}No{% endif %}</li>
+        </ul>
 
-    <!-- PLAN CARD TEMPLATE -->
-    {% comment %} FREE {% endcomment %}
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
-
-      <h3 class="text-lg font-semibold mb-1">Free</h3>
-      <p class="text-slate-500 text-sm mb-4">For small starters</p>
-
-      <h2 class="text-3xl font-bold mb-6">₦0</h2>
-
-      <ul class="space-y-2 text-sm text-slate-500 mb-6">
-        <li>✔ Up to 2 Products</li>
-        <li>✔ Basic Sales Tracking</li>
-        <li>✔ Limited Reports</li>
-      </ul>
-
-      {% if current_plan == "free" %}
-        <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">
-          Current Plan
-        </button>
-
-      {% elif request.user.role == "staff" %}
-        <a href="{% url 'subscribe' 'free' %}"
-           class="block text-center bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
-          Choose Plan
-        </a>
-
-      {% else %}
-        <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">
-          Not Allowed
-        </button>
-      {% endif %}
-
-    </div>
-
-    <!-- BASIC -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
-
-      <h3 class="text-lg font-semibold mb-1">Basic</h3>
-      <p class="text-slate-500 text-sm mb-4">For small businesses</p>
-
-      <h2 class="text-3xl font-bold mb-6">₦2,500/mo</h2>
-
-      <ul class="space-y-2 text-sm text-slate-500 mb-6">
-        <li>✔ Up to 10 Products</li>
-        <li>✔ Sales Tracking</li>
-        <li>✔ Basic Analytics</li>
-        <li>✔ Email Notifications</li>
-      </ul>
-
-      {% if current_plan == "basic" %}
-        <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">
-          Current Plan
-        </button>
-
-      {% elif request.user.role == "staff" %}
-        <a href="{% url 'paystack_init' 'basic' %}"
-           class="block text-center bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
-          Upgrade
-        </a>
-
-      {% else %}
-        <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">
-          Not Allowed
-        </button>
-      {% endif %}
-
-    </div>
-
-    <!-- PRO -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border-2 border-indigo-500 relative">
-
-      <span class="absolute top-3 right-3 text-xs bg-indigo-600 text-white px-2 py-1 rounded-md">
-        Popular
-      </span>
-
-      <h3 class="text-lg font-semibold mb-1">Pro</h3>
-      <p class="text-slate-500 text-sm mb-4">For growing businesses</p>
-
-      <h2 class="text-3xl font-bold mb-6">₦5,000/mo</h2>
-
-      <ul class="space-y-2 text-sm text-slate-500 mb-6">
-        <li>✔ Unlimited Products</li>
-        <li>✔ Full Sales Analytics</li>
-        <li>✔ Inventory Alerts</li>
-        <li>✔ Email Reports</li>
-      </ul>
-
-      {% if current_plan == "pro" %}
-        <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">
-          Current Plan
-        </button>
-
-      {% elif request.user.role == "staff" %}
-        <a href="{% url 'paystack_init' 'pro' %}"
-           class="block text-center bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
-          Upgrade
-        </a>
-
-      {% else %}
-        <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">
-          Not Allowed
-        </button>
-      {% endif %}
-
-    </div>
-
-    <!-- ENTERPRISE -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
-
-      <h3 class="text-lg font-semibold mb-1">Enterprise</h3>
-      <p class="text-slate-500 text-sm mb-4">For large scale operations</p>
-
-      <h2 class="text-3xl font-bold mb-6">₦15,000/mo</h2>
-
-      <ul class="space-y-2 text-sm text-slate-500 mb-6">
-        <li>✔ Everything in Pro</li>
-        <li>✔ Multi-branch Support</li>
-        <li>✔ Advanced Analytics</li>
-        <li>✔ Priority Support</li>
-      </ul>
-
-      {% if current_plan == "enterprise" %}
-        <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">
-          Current Plan
-        </button>
-
-      {% elif request.user.role == "staff" %}
-        <a href="{% url 'paystack_init' 'enterprise' %}"
-           class="block text-center bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
-          Upgrade
-        </a>
-
-      {% else %}
-        <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">
-          Not Allowed
-        </button>
-      {% endif %}
-
-    </div>
-
+        {% if current_plan == plan.key and is_active %}
+          <button class="w-full bg-slate-300 dark:bg-slate-600 py-2 rounded-lg text-sm cursor-not-allowed">Current Plan</button>
+        {% elif request.user.role == 'staff' and plan.key != 'free' %}
+          <form method="post" action="{% url 'subscribe' plan.key %}">
+            {% csrf_token %}
+            <input type="hidden" name="billing_cycle" value="{{ selected_billing_cycle }}">
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition">{% if current_plan == plan.key %}Switch Billing{% else %}Upgrade{% endif %}</button>
+          </form>
+        {% else %}
+          <button class="w-full bg-slate-200 dark:bg-slate-700 py-2 rounded-lg text-sm cursor-not-allowed">Not Available</button>
+        {% endif %}
+      </div>
+    {% endfor %}
   </div>
 
 </div>
