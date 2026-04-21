@@ -143,7 +143,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # =========================
 # FRONTEND URL (IMPORTANT)
 # =========================
-BASE_URL = os.getenv("BASE_URL", "https://stockiepilot.up.railway.app")
+BASE_URL = os.getenv("BASE_URL", "https://stockiepil.up.railway.app")
 
 
 # =========================
