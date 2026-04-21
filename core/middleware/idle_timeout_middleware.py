@@ -14,7 +14,7 @@ class IdleTimeoutMiddleware:
     def __call__(self, request):
         if request.user.is_authenticated:
             now = timezone.now()
-            timeout_seconds = getattr(settings, "AUTO_LOGOUT_IDLE_SECONDS", 300)
+            timeout_seconds = getattr(settings, "AUTO_LOGOUT_IDLE_SECONDS", 900)
 
             last_activity_raw = request.session.get("last_activity")
             last_activity = parse_datetime(last_activity_raw) if last_activity_raw else None
