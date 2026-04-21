@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+from urllib.parse import urlparse
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 import dj_database_url
 
@@ -14,10 +16,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # =========================
 # SECURITY
 # =========================
-SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-secret-key")
+SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "unsafe-dev-secret-key"
+    else:
+        raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG is False")
+
+ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host.strip()]
+
+_raw_csrf_origins = [origin.strip() for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()]
+if not _raw_csrf_origins:
+    base_url = os.getenv("BASE_URL", "")
+    if base_url:
+        parsed = urlparse(base_url)
+        if parsed.scheme and parsed.netloc:
+            _raw_csrf_origins = [f"{parsed.scheme}://{parsed.netloc}"]
+CSRF_TRUSTED_ORIGINS = _raw_csrf_origins
 
 
 # =========================
@@ -106,6 +123,22 @@ AUTH_USER_MODEL = 'users.User'
 LOGIN_URL = '/login/'
 
 AUTO_LOGOUT_IDLE_SECONDS = int(os.getenv("AUTO_LOGOUT_IDLE_SECONDS", "300"))
+
+
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")
+X_FRAME_OPTIONS = "DENY"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # =========================
 # STATIC / MEDIA
