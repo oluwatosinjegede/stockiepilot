@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.timezone import now, timedelta
 
-from .models import Category, Product, Supplier
+from .models import Category, Product, ProductSupply, Supplier
 from .services.procurement import create_product_with_supply, create_supplier, record_product_supply
 from apps.sales.models import SaleItem
 from apps.subscriptions.services import can_create_product
@@ -83,7 +83,8 @@ def supplier_list_view(request):
         return redirect("dashboard")
 
     suppliers = Supplier.objects.filter(company=company).order_by("name")
-    return render(request, "products/suppliers.html", {"suppliers": suppliers})
+    analytics = _build_supplier_analytics(company, suppliers)
+    return render(request, "products/suppliers.html", {"suppliers": suppliers, **analytics})
 
 
 @login_required
@@ -251,6 +252,76 @@ def _build_product_analytics(products):
             "pie_values": json.dumps(
                 [max(total_products - low_stock_count - out_of_stock_count, 0), low_stock_count, out_of_stock_count]
             ),
+        },
+    }
+
+
+def _build_supplier_analytics(company, suppliers):
+    supplier_rows = []
+    total_supplied_units = 0
+    total_sales_revenue = Decimal("0")
+
+    for supplier in suppliers:
+        supply_qs = ProductSupply.objects.filter(company=company, supplier=supplier)
+        supply_agg = supply_qs.aggregate(total_units=Sum("quantity_supplied"), total_spend=Sum("total_cost"))
+        product_ids = list(supply_qs.values_list("product_id", flat=True).distinct())
+
+        sales_agg = SaleItem.objects.filter(
+            sale__company=company,
+            product_id__in=product_ids,
+        ).aggregate(units_sold=Sum("quantity"), revenue=Sum("total_price"))
+
+        supplied_units = supply_agg["total_units"] or 0
+        sales_revenue = sales_agg["revenue"] or Decimal("0")
+        row = {
+            "supplier": supplier,
+            "products_count": len(product_ids),
+            "supplied_units": supplied_units,
+            "supply_spend": supply_agg["total_spend"] or Decimal("0"),
+            "units_sold": sales_agg["units_sold"] or 0,
+            "sales_revenue": sales_revenue,
+        }
+        supplier_rows.append(row)
+        total_supplied_units += supplied_units
+        total_sales_revenue += sales_revenue
+
+    supplier_rows.sort(key=lambda row: row["sales_revenue"], reverse=True)
+    top_supplier = supplier_rows[0] if supplier_rows else None
+    active_supplier_count = sum(1 for row in supplier_rows if row["supplier"].is_active)
+
+    insights = [
+        f"{len(supplier_rows)} supplier(s) are tracked, {active_supplier_count} currently active.",
+        f"Suppliers have delivered {total_supplied_units} total unit(s).",
+    ]
+    if top_supplier and top_supplier["sales_revenue"] > 0:
+        insights.append(
+            f"Top supplier by product sales: {top_supplier['supplier'].name} (₦{top_supplier['sales_revenue']:.2f})."
+        )
+    if total_sales_revenue > 0:
+        insights.append(f"Products linked to suppliers generated ₦{total_sales_revenue:.2f} in sales.")
+
+    pie_rows = [row for row in supplier_rows if row["sales_revenue"] > 0][:5]
+    others_revenue = sum((row["sales_revenue"] for row in supplier_rows[5:] if row["sales_revenue"] > 0), Decimal("0"))
+    pie_labels = [row["supplier"].name for row in pie_rows]
+    pie_values = [float(row["sales_revenue"]) for row in pie_rows]
+    if others_revenue > 0:
+        pie_labels.append("Other Suppliers")
+        pie_values.append(float(others_revenue))
+
+    return {
+        "supplier_rows": supplier_rows,
+        "supplier_insights": insights,
+        "suppliers_total": len(supplier_rows),
+        "active_suppliers_total": active_supplier_count,
+        "supplied_units_total": total_supplied_units,
+        "supplier_sales_total": total_sales_revenue,
+        "top_supplier_name": top_supplier["supplier"].name if top_supplier else "—",
+        "supplier_charts": {
+            "labels": json.dumps([row["supplier"].name for row in supplier_rows[:7]]),
+            "product_values": json.dumps([row["products_count"] for row in supplier_rows[:7]]),
+            "revenue_values": json.dumps([float(row["sales_revenue"]) for row in supplier_rows[:7]]),
+            "pie_labels": json.dumps(pie_labels),
+            "pie_values": json.dumps(pie_values),
         },
     }
 

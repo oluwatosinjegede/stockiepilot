@@ -1,21 +1,119 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="space-y-4">
+<div class="space-y-6">
   <div class="flex items-center justify-between">
-    <h2 class="text-xl font-semibold">Suppliers</h2>
+    <h2 class="text-xl font-semibold">Suppliers Analytics</h2>
     <a href="{% url 'create_supplier' %}" class="bg-indigo-600 text-white px-3 py-2 rounded-lg">+ Add Supplier</a>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="card">
+      <p class="text-slate-500 text-sm">Total Suppliers</p>
+      <h3 class="text-lg font-semibold">{{ suppliers_total }}</h3>
+    </div>
+    <div class="card">
+      <p class="text-slate-500 text-sm">Active Suppliers</p>
+      <h3 class="text-lg font-semibold">{{ active_suppliers_total }}</h3>
+    </div>
+    <div class="card">
+      <p class="text-slate-500 text-sm">Units Supplied</p>
+      <h3 class="text-lg font-semibold">{{ supplied_units_total }}</h3>
+    </div>
+    <div class="card">
+      <p class="text-slate-500 text-sm">Top Supplier</p>
+      <h3 class="text-lg font-semibold">{{ top_supplier_name }}</h3>
+    </div>
+  </div>
+
+  <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4">
+    <h3 class="font-semibold mb-2">Supplier Performance Highlights</h3>
+    <ul class="space-y-1 text-sm text-slate-700 dark:text-slate-200">
+      {% for insight in supplier_insights %}
+      <li>• {{ insight }}</li>
+      {% empty %}
+      <li>• Not enough supplier analytics yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card">
+      <h4 class="font-semibold mb-3">Suppliers by Products Managed</h4>
+      <canvas id="supplierProductsChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h4 class="font-semibold mb-3">Supplier Product Sales Share (Pie)</h4>
+      <div class="max-w-md mx-auto">
+        <canvas id="supplierPieChart"></canvas>
+      </div>
+    </div>
   </div>
   <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
     <table class="w-full text-sm">
-      <thead class="bg-slate-50 dark:bg-slate-700"><tr><th class="p-3 text-left">Name</th><th class="p-3 text-left">Contact</th><th class="p-3 text-left">Phone</th><th class="p-3 text-left">Status</th></tr></thead>
+      <thead class="bg-slate-50 dark:bg-slate-700">
+        <tr>
+          <th class="p-3 text-left">Name</th>
+          <th class="p-3 text-left">Products</th>
+          <th class="p-3 text-left">Units Supplied</th>
+          <th class="p-3 text-left">Units Sold</th>
+          <th class="p-3 text-left">Sales Revenue</th>
+          <th class="p-3 text-left">Status</th>
+        </tr>
+      </thead>
       <tbody>
-      {% for s in suppliers %}
-        <tr class="border-t"><td class="p-3">{{ s.name }}</td><td class="p-3">{{ s.contact_person|default:'—' }}</td><td class="p-3">{{ s.phone|default:'—' }}</td><td class="p-3">{% if s.is_active %}Active{% else %}Inactive{% endif %}</td></tr>
+      {% for row in supplier_rows %}
+        <tr class="border-t">
+          <td class="p-3">{{ row.supplier.name }}</td>
+          <td class="p-3">{{ row.products_count }}</td>
+          <td class="p-3">{{ row.supplied_units }}</td>
+          <td class="p-3">{{ row.units_sold }}</td>
+          <td class="p-3">₦{{ row.sales_revenue|floatformat:2 }}</td>
+          <td class="p-3">{% if row.supplier.is_active %}Active{% else %}Inactive{% endif %}</td>
+        </tr>
       {% empty %}
-        <tr><td colspan="4" class="p-6 text-center text-slate-400">No suppliers yet.</td></tr>
+        <tr><td colspan="6" class="p-6 text-center text-slate-400">No suppliers yet.</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+<script>
+function safeParse(data){
+  try { return JSON.parse(data) } catch { return [] }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const labels = safeParse('{{ supplier_charts.labels|escapejs }}')
+  const productValues = safeParse('{{ supplier_charts.product_values|escapejs }}')
+  const pieLabels = safeParse('{{ supplier_charts.pie_labels|escapejs }}')
+  const pieValues = safeParse('{{ supplier_charts.pie_values|escapejs }}')
+
+  if (typeof Chart !== "undefined") {
+    new Chart(document.getElementById('supplierProductsChart'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Products per Supplier',
+          data: productValues,
+          backgroundColor: '#6366f1',
+          borderRadius: 6,
+        }]
+      }
+    })
+
+    new Chart(document.getElementById('supplierPieChart'), {
+      type: 'pie',
+      data: {
+        labels: pieLabels,
+        datasets: [{
+          data: pieValues,
+          backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'],
+        }]
+      }
+    })
+  }
+})
+</script>
 {% endblock %}
