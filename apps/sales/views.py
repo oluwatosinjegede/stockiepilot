@@ -196,7 +196,7 @@ def receipt_list(request):
 
     return render(
         request,
-        "billing/receipt_list.html",
+        "billing/partials/receipt_list.html",
         {
             "receipts": receipts,
             "summary": summary,
@@ -279,7 +279,7 @@ def payment_receipt_detail(request, receipt_id):
 
     return render(
         request,
-        "billing/receipt_detail.html",
+        "billing/partials/receipt_detail.html",
         {
             "receipt": receipt,
             "sale": receipt.sale,
