@@ -3,6 +3,8 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.products.models import Product
@@ -11,6 +13,27 @@ from apps.subscriptions.services import can_access_analytics, is_subscription_ac
 from .models import PaymentReceipt, Sale, SaleInvoice, SaleItem
 from .services import create_sale_with_payment, record_sale_payment
 from .services.analytics import build_sales_analytics
+
+
+def _customer_display_name(sale):
+    return sale.customer_name or "Walk-in Customer"
+
+
+def _billing_status_badge(status):
+    status = (status or "").lower()
+    if status in {"paid", "completed", "settled"}:
+        return {"label": "Paid", "tone": "paid"}
+    if status in {"partial", "part paid", "pending"}:
+        return {"label": "Part Paid", "tone": "partial"}
+    if status in {"zero", "unpaid", "due"}:
+        return {"label": "Unpaid", "tone": "unpaid"}
+    if status in {"cancelled", "canceled"}:
+        return {"label": "Cancelled", "tone": "cancelled"}
+    return {"label": status.replace("_", " ").title() or "Unknown", "tone": "muted"}
+
+
+def _receipt_status_badge(receipt):
+    return {"label": "Paid", "tone": "paid"} if receipt.remaining_balance <= 0 else {"label": "Part Paid", "tone": "partial"}
 
 
 
@@ -128,6 +151,59 @@ def sales_view(request):
         },
     )
 
+
+@login_required
+def invoice_list(request):
+    company = getattr(request.user, "company", None)
+    invoices = (
+        SaleInvoice.objects.filter(company=company)
+        .select_related("sale")
+        .order_by("-created_at")
+    )
+
+    summary = invoices.aggregate(
+        total_invoices=Count("id"),
+        total_invoiced_amount=Sum("sale__total_amount"),
+        paid_invoices=Count("id", filter=Q(sale__balance__lte=0)),
+        unpaid_or_partial=Count("id", filter=Q(sale__balance__gt=0)),
+    )
+
+    return render(
+        request,
+        "billing/invoice_list.html",
+        {
+            "invoices": invoices,
+            "summary": summary,
+        },
+    )
+
+
+@login_required
+def receipt_list(request):
+    company = getattr(request.user, "company", None)
+    receipts = (
+        PaymentReceipt.objects.filter(company=company)
+        .select_related("sale", "invoice", "sale_payment")
+        .order_by("-payment_date")
+    )
+
+    summary = receipts.aggregate(
+        total_receipts=Count("id"),
+        total_received_amount=Sum("amount_paid"),
+        receipts_today=Count("id", filter=Q(payment_date__date=timezone.now().date())),
+        receipts_this_month=Count("id", filter=Q(payment_date__year=timezone.now().year, payment_date__month=timezone.now().month)),
+    )
+
+    return render(
+        request,
+        "billing/receipt_list.html",
+        {
+            "receipts": receipts,
+            "summary": summary,
+        },
+    )
+
+
 @login_required
 def update_sale_payment(request, sale_id):
     affiliate_redirect = _redirect_affiliate_if_needed(request)
@@ -179,7 +255,18 @@ def sale_invoice_detail(request, sale_id):
     company = getattr(request.user, "company", None)
     sale = get_object_or_404(Sale, id=sale_id, company=company)
     invoice = get_object_or_404(SaleInvoice, sale=sale, company=company)
-    return render(request, "sales/invoice_detail.html", {"sale": sale, "invoice": invoice})
+    return render(
+        request,
+        "billing/invoice_detail.html",
+        {
+            "sale": sale,
+            "invoice": invoice,
+            "sale_items": sale.items.select_related("product").all(),
+            "company": sale.company,
+            "customer_display_name": _customer_display_name(sale),
+            "status_badge": _billing_status_badge(sale.payment_status),
+        },
+    )
 
 @login_required
 def payment_receipt_detail(request, receipt_id):
@@ -190,4 +277,16 @@ def payment_receipt_detail(request, receipt_id):
         company=company,
     )
 
-    return render(request, "sales/receipt_detail.html", {"receipt": receipt, "sale": receipt.sale})
+    return render(
+        request,
+        "billing/receipt_detail.html",
+        {
+            "receipt": receipt,
+            "sale": receipt.sale,
+            "linked_invoice": receipt.invoice,
+            "company": receipt.company,
+            "customer_display_name": _customer_display_name(receipt.sale),
+            "generated_by": receipt.generated_by,
+            "status_badge": _receipt_status_badge(receipt),
+        },
+    )

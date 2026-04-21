@@ -1,0 +1,44 @@
+<style>
+  .billing-page { display: flex; flex-direction: column; gap: 1.5rem; }
+  .billing-card { border: 1px solid rgb(226 232 240); border-radius: 1.5rem; background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, .08); }
+  .billing-subtitle { color: rgb(100 116 139); font-size: .9rem; }
+  .billing-summary-grid { display: grid; gap: 1rem; grid-template-columns: repeat(1,minmax(0,1fr)); }
+  .billing-stat { padding: 1.25rem; }
+  .billing-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: rgb(100 116 139); font-weight: 600; }
+  .billing-value { margin-top: .5rem; font-size: 1.5rem; line-height: 2rem; font-weight: 700; color: rgb(15 23 42); }
+  .billing-table-wrap { overflow-x: auto; }
+  .billing-table { min-width: 100%; font-size: .9rem; border-collapse: separate; border-spacing: 0; }
+  .billing-table th { background: rgb(248 250 252); padding: .75rem 1rem; text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: rgb(100 116 139); font-weight: 600; }
+  .billing-table td { padding: .8rem 1rem; color: rgb(51 65 85); border-top: 1px solid rgb(226 232 240); }
+  .billing-status-badge { display: inline-flex; align-items: center; border-radius: 9999px; padding: .25rem .75rem; font-size: .72rem; font-weight: 700; }
+  .billing-status-paid { background: rgb(209 250 229); color: rgb(4 120 87); }
+  .billing-status-partial { background: rgb(254 243 199); color: rgb(180 83 9); }
+  .billing-status-unpaid { background: rgb(ffe4e6); color: rgb(190 24 93); }
+  .billing-status-cancelled { background: rgb(226 232 240); color: rgb(71 85 105); }
+  .billing-status-muted { background: rgb(241 245 249); color: rgb(71 85 105); }
+
+  @media (min-width: 640px) { .billing-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  @media (min-width: 1280px) { .billing-summary-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
+
+  .dark .billing-card { border-color: rgb(51 65 85); background: rgb(30 41 59); box-shadow: none; }
+  .dark .billing-subtitle, .dark .billing-label { color: rgb(148 163 184); }
+  .dark .billing-value { color: #fff; }
+  .dark .billing-table th { background: rgba(15, 23, 42, .55); color: rgb(148 163 184); }
+  .dark .billing-table td { color: rgb(226 232 240); border-color: rgb(51 65 85); }
+  .dark .billing-status-paid { background: rgba(16,185,129,.2); color: rgb(110 231 183); }
+  .dark .billing-status-partial { background: rgba(245,158,11,.2); color: rgb(252 211 77); }
+  .dark .billing-status-unpaid { background: rgba(244,63,94,.2); color: rgb(251 113 133); }
+  .dark .billing-status-cancelled, .dark .billing-status-muted { background: rgba(100,116,139,.35); color: rgb(226 232 240); }
+
+  @media print {
+    #sidebar, header, #install-app-btn, #install-app-help, .print-hidden, .no-print { display: none !important; }
+    body, main { background: #fff !important; color: #000 !important; }
+    .flex.h-full > .flex-1 { margin: 0 !important; }
+    main { padding: 0 !important; }
+    .billing-page { gap: 1rem !important; }
+    .billing-card { box-shadow: none !important; border: 1px solid #d1d5db !important; border-radius: 12px !important; break-inside: avoid; }
+    .print-document { max-width: 100% !important; margin: 0 !important; }
+    .billing-table th { background: #f8fafc !important; color: #111827 !important; }
+    .billing-table td { color: #111827 !important; border-color: #e5e7eb !important; }
+  }
+</style>

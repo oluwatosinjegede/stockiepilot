@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "billing/partials/_billing_styles.html" %}
+<div class="billing-page max-w-7xl mx-auto">
+  <section class="billing-card p-6 md:p-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Receipts</h1>
+    <p class="billing-subtitle mt-1">Review payment confirmations, outstanding balances, and linked invoices.</p>
+  </section>
+
+  <section class="billing-summary-grid">
+    <article class="billing-stat billing-card"><p class="billing-label">Total Receipts</p><p class="billing-value">{{ summary.total_receipts|default:0 }}</p></article>
+    <article class="billing-stat billing-card"><p class="billing-label">Total Received</p><p class="billing-value text-emerald-600 dark:text-emerald-300">₦{{ summary.total_received_amount|default:0|floatformat:2 }}</p></article>
+    <article class="billing-stat billing-card"><p class="billing-label">Generated Today</p><p class="billing-value">{{ summary.receipts_today|default:0 }}</p></article>
+    <article class="billing-stat billing-card"><p class="billing-label">Generated This Month</p><p class="billing-value">{{ summary.receipts_this_month|default:0 }}</p></article>
+  </section>
+
+  <section class="billing-card p-0 overflow-hidden">
+    <div class="billing-table-wrap">
+      <table class="billing-table">
+        <thead><tr><th>Receipt #</th><th>Customer</th><th>Payment Date</th><th>Amount Paid</th><th>Remaining Balance</th><th>Method</th><th class="no-print">Actions</th></tr></thead>
+        <tbody>
+          {% for receipt in receipts %}
+          <tr>
+            <td class="font-semibold">{{ receipt.receipt_number }}</td>
+            <td>{{ receipt.sale.customer_name|default:"Walk-in Customer" }}</td>
+            <td>{{ receipt.payment_date|date:"M d, Y H:i" }}</td>
+            <td class="font-semibold text-emerald-600 dark:text-emerald-300">₦{{ receipt.amount_paid|floatformat:2 }}</td>
+            <td class="font-semibold {% if receipt.remaining_balance > 0 %}text-amber-600 dark:text-amber-300{% else %}text-emerald-600 dark:text-emerald-300{% endif %}">₦{{ receipt.remaining_balance|floatformat:2 }}</td>
+            <td>{{ receipt.sale_payment.payment_method|default:"N/A"|title }}</td>
+            <td class="no-print">
+              <div class="flex flex-wrap gap-2">
+                <a href="{% url 'payment_receipt_detail' receipt.id %}" class="inline-flex items-center rounded-lg px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold">View</a>
+                <a href="{% url 'payment_receipt_detail' receipt.id %}" class="inline-flex items-center rounded-lg px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-xs font-semibold">Print</a>
+                {% if receipt.invoice %}<a href="{% url 'sale_invoice_detail' receipt.sale.id %}" class="inline-flex items-center rounded-lg px-3 py-1.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">Invoice</a>{% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="p-8 text-center"><div class="max-w-md mx-auto rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 p-6"><h3 class="text-lg font-semibold">No receipts yet</h3><p class="billing-subtitle mt-1">Once payments are recorded, receipts will appear here with printable detail views.</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

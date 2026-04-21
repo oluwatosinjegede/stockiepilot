@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "billing/partials/_billing_styles.html" %}
+<div class="billing-page max-w-7xl mx-auto">
+  <section class="billing-card p-6 md:p-8">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Invoices</h1>
+        <p class="billing-subtitle mt-1">Track all issued invoices, balances, and payment states in one polished view.</p>
+      </div>
+      <div class="no-print">
+        <a href="{% url 'create_sale' %}" class="inline-flex items-center rounded-xl px-4 py-2 bg-indigo-600 text-white text-sm font-medium">+ New Sale</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="billing-summary-grid">
+    <article class="billing-stat billing-card"><p class="billing-label">Total Invoices</p><p class="billing-value">{{ summary.total_invoices|default:0 }}</p></article>
+    <article class="billing-stat billing-card"><p class="billing-label">Total Invoiced</p><p class="billing-value">₦{{ summary.total_invoiced_amount|default:0|floatformat:2 }}</p></article>
+    <article class="billing-stat billing-card"><p class="billing-label">Paid Invoices</p><p class="billing-value text-emerald-600 dark:text-emerald-300">{{ summary.paid_invoices|default:0 }}</p></article>
+    <article class="billing-stat billing-card"><p class="billing-label">Unpaid/Part Paid</p><p class="billing-value text-rose-600 dark:text-rose-300">{{ summary.unpaid_or_partial|default:0 }}</p></article>
+  </section>
+
+  <section class="billing-card p-0 overflow-hidden">
+    <div class="billing-table-wrap">
+      <table class="billing-table">
+        <thead>
+          <tr><th>Invoice #</th><th>Customer</th><th>Date</th><th>Total</th><th>Amount Paid</th><th>Balance</th><th>Status</th><th class="no-print">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for invoice in invoices %}
+          <tr>
+            <td class="font-semibold">{{ invoice.invoice_number }}</td>
+            <td>{{ invoice.sale.customer_name|default:"Walk-in Customer" }}</td>
+            <td>{{ invoice.created_at|date:"M d, Y" }}</td>
+            <td>₦{{ invoice.sale.total_amount|floatformat:2 }}</td>
+            <td>₦{{ invoice.sale.amount_paid|floatformat:2 }}</td>
+            <td class="font-semibold {% if invoice.sale.balance > 0 %}text-amber-600 dark:text-amber-300{% else %}text-emerald-600 dark:text-emerald-300{% endif %}">₦{{ invoice.sale.balance|floatformat:2 }}</td>
+            <td>{% if invoice.sale.balance <= 0 %}{% include "billing/partials/status_badge.html" with label="Paid" tone="paid" %}{% elif invoice.sale.amount_paid > 0 %}{% include "billing/partials/status_badge.html" with label="Part Paid" tone="partial" %}{% else %}{% include "billing/partials/status_badge.html" with label="Unpaid" tone="unpaid" %}{% endif %}</td>
+            <td class="no-print">
+              <div class="flex flex-wrap gap-2">
+                <a href="{% url 'sale_invoice_detail' invoice.sale.id %}" class="inline-flex items-center rounded-lg px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold">View</a>
+                <a href="{% url 'sale_invoice_detail' invoice.sale.id %}" class="inline-flex items-center rounded-lg px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-xs font-semibold">Print</a>
+                <button type="button" class="inline-flex items-center rounded-lg px-3 py-1.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">PDF</button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="p-8 text-center">
+              <div class="max-w-md mx-auto rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 p-6">
+                <h3 class="text-lg font-semibold">No invoices yet</h3>
+                <p class="billing-subtitle mt-1">Create your first sale to generate a professional invoice and track receivables.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

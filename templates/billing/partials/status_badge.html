@@ -1,0 +1,3 @@
+<span class="billing-status-badge {% if tone == 'paid' %}billing-status-paid{% elif tone == 'partial' %}billing-status-partial{% elif tone == 'unpaid' %}billing-status-unpaid{% elif tone == 'cancelled' %}billing-status-cancelled{% else %}billing-status-muted{% endif %}">
+  {{ label }}
+</span>
