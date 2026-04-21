@@ -110,7 +110,12 @@ def record_product_supply(company, user, product, supply_data):
         if not supplier:
             raise ValidationError("Selected supplier is invalid.")
 
-    quantity_supplied = int(supply_data.get("quantity_supplied") or 0)
+    quantity_input = (
+        supply_data.get("quantity_supplied")
+        or supply_data.get("stock_quantity")
+        or 0
+    )
+    quantity_supplied = int(quantity_input)
     if quantity_supplied <= 0:
         raise ValidationError("Supplied quantity must be greater than zero.")
 
